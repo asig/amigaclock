@@ -1,0 +1,25 @@
+## Managed components. `idf.py` downloads these automatically into
+## managed_components/ on the first build.
+
+version: "1.0.0"
+description: "AmigaClock display and logic component for ESP32"
+license: "GPL-3.0-or-later"
+
+dependencies:
+  idf: ">=5.1"
+
+  # RGB + 3-wire SPI driver for the ST7701(S) controller.
+  # Also contains the official "rgb_avoid_tearing" example, which shows
+  # the exact panel config structs for your IDF version.
+  espressif/esp_lcd_st7701: "^2.0.0"
+
+  # Provides esp_lcd_new_panel_io_3wire_spi() for the ST7701 command
+  # initialization - used by esp_lcd_st7701, but must be added as a
+  # dependency itself.
+  espressif/esp_lcd_panel_io_additions: "^1.0.1"
+
+  # Capacitive touch controller GT911 (I2C)
+  espressif/esp_lcd_touch_gt911: "^1.1.0"
+
+  # LVGL graphics library
+  lvgl/lvgl: "^8.3.11"

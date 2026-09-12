@@ -1,0 +1,31 @@
+# Build output (esp32_firmware/ has its own .gitignore for ESP-IDF specifics)
+**/build/
+
+# IDE and local workspace metadata
+.vscode/
+**/.idea/
+**/.gradle/
+**/.vscode/
+**/.vs/
+.cache/
+**/.cache/
+
+# Logs and generated reports
+*.log
+*.log.*
+*.map
+
+# Compiled and temporary files
+*.elf
+*.o
+*.obj
+*.a
+*.pyc
+__pycache__/
+**/__pycache__/
+.pytest_cache/
+**/.pytest_cache/
+
+# OS metadata
+.DS_Store
+Thumbs.db

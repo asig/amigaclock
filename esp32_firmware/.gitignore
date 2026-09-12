@@ -1,0 +1,9 @@
+# ESP-IDF build output and downloaded managed components
+build/
+managed_components/
+sdkconfig.old
+.cache/
+
+# Note: dependencies.lock IS tracked on purpose - it pins managed component
+# versions/hashes for reproducible builds (this is an application, not a
+# reusable component).
