@@ -23,7 +23,7 @@
 
 #include "esp_log.h"
 #include "esp_heap_caps.h"
-#include "driver/gpio.h"
+#include "driver/ledc.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_io_additions.h"
 #include "esp_lcd_panel_ops.h"
@@ -44,29 +44,48 @@ static lv_disp_drv_t s_disp_drv;
  *
  * IMPORTANT: According to the manufacturer's schematic, IO38 (BL_CTR) is not
  * wired directly to an LED, but via a resistor network to the EN/FB pin of a
- * boost LED driver IC (U5). Such driver ICs often expect a clean digital
- * level on the EN pin instead of a PWM square wave - with PWM the boost
- * converter may not start up at all, leaving the display completely dark
- * even though the panel was initialized correctly.
- * Hence the deliberately simple digital on/off here instead of LEDC PWM dimming.
+ * boost LED driver IC (U5). Such driver ICs can be sensitive to the signal
+ * on their EN pin; if the display stays dark after enabling PWM here, try
+ * raising BACKLIGHT_PWM_FREQ_HZ or fall back to digital on/off (percent 0
+ * or 100 only) for this board revision.
  * ---------------------------------------------------------------------- */
+#define BACKLIGHT_LEDC_TIMER    LEDC_TIMER_0
+#define BACKLIGHT_LEDC_MODE     LEDC_LOW_SPEED_MODE
+#define BACKLIGHT_LEDC_CHANNEL  LEDC_CHANNEL_0
+#define BACKLIGHT_LEDC_DUTY_RES LEDC_TIMER_10_BIT
+#define BACKLIGHT_PWM_FREQ_HZ   5000
+
 static void backlight_init(void)
 {
-    gpio_config_t bl_cfg = {
-        .pin_bit_mask = 1ULL << PIN_LCD_BACKLIGHT,
-        .mode = GPIO_MODE_OUTPUT,
-        .pull_up_en = GPIO_PULLUP_DISABLE,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_DISABLE,
+    ledc_timer_config_t timer_cfg = {
+        .speed_mode = BACKLIGHT_LEDC_MODE,
+        .duty_resolution = BACKLIGHT_LEDC_DUTY_RES,
+        .timer_num = BACKLIGHT_LEDC_TIMER,
+        .freq_hz = BACKLIGHT_PWM_FREQ_HZ,
+        .clk_cfg = LEDC_AUTO_CLK,
     };
-    ESP_ERROR_CHECK(gpio_config(&bl_cfg));
-    gpio_set_level(PIN_LCD_BACKLIGHT, 0);
+    ESP_ERROR_CHECK(ledc_timer_config(&timer_cfg));
+
+    ledc_channel_config_t channel_cfg = {
+        .gpio_num = PIN_LCD_BACKLIGHT,
+        .speed_mode = BACKLIGHT_LEDC_MODE,
+        .channel = BACKLIGHT_LEDC_CHANNEL,
+        .timer_sel = BACKLIGHT_LEDC_TIMER,
+        .duty = 0,
+        .hpoint = 0,
+    };
+    ESP_ERROR_CHECK(ledc_channel_config(&channel_cfg));
 }
 
 void lcd_panel_set_backlight(uint8_t percent)
 {
-    // No dimming anymore - anything > 0 simply switches it on.
-    gpio_set_level(PIN_LCD_BACKLIGHT, percent > 0 ? 1 : 0);
+    if (percent > 100) {
+        percent = 100;
+    }
+    uint32_t max_duty = (1 << BACKLIGHT_LEDC_DUTY_RES) - 1;
+    uint32_t duty = (max_duty * percent) / 100;
+    ESP_ERROR_CHECK(ledc_set_duty(BACKLIGHT_LEDC_MODE, BACKLIGHT_LEDC_CHANNEL, duty));
+    ESP_ERROR_CHECK(ledc_update_duty(BACKLIGHT_LEDC_MODE, BACKLIGHT_LEDC_CHANNEL));
 }
 
 /* ------------------------------------------------------------------------
@@ -217,7 +236,7 @@ lv_disp_t *lcd_panel_init(void)
     s_disp_drv.user_data = s_panel;
 
     lv_disp_t *disp = lv_disp_drv_register(&s_disp_drv);
-
+    
     lcd_panel_set_backlight(100);
     ESP_LOGI(TAG, "LCD panel initialized");
     return disp;
