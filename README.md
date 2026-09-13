@@ -1,4 +1,4 @@
-# Amiga Clock Workspace
+# Amiga Clock
 
 AmigaClock is a desk clock, built on GUITION/Sunton ESP32-4848S040 hardware
 (ESP32-S3 with a 480x480 RGB display and capacitive touch), that renders an
