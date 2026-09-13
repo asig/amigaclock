@@ -23,6 +23,7 @@ idf_component_register(
         "wifi.c"
         "ble_services.c"
         "amiga_clock_ui.c"
+        "fontdata.c"
     INCLUDE_DIRS "."
     REQUIRES esp_lcd esp_timer driver nvs_flash bt
 )

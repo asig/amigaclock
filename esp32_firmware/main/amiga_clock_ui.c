@@ -62,6 +62,8 @@ static const char *TAG = "amiga_clock_ui";
 // Clock dimensions scaled to the actual display resolution, including spacing
 #define CANVAS_BORDER 20
 
+extern uint8_t font[];
+
 struct clock_dimensions {
     lv_point_t center;
 
@@ -79,9 +81,13 @@ struct clock_dimensions {
     lv_coord_t tick_big_w;
 };
 
-static lv_obj_t *s_canvas;
-static lv_color_t *s_canvas_buf;
-static lv_timer_t *s_timer;
+static lv_obj_t *screen_canvas;
+static lv_color_t *screen_canvas_buf;
+static lv_timer_t *timer;
+
+#define FONT_CANVAS_W (256*8)
+#define FONT_CANVAS_H (8)
+static uint8_t *font_canvas_buf;
 
 static struct clock_dimensions clock_dims_without_date;
 static struct clock_dimensions clock_dims_with_date;
@@ -89,6 +95,21 @@ static struct clock_dimensions clock_dims_with_date;
 static struct clock_dimensions *current_clock_dims;
 static bool show_date;
 static bool show_seconds;
+
+static char * const month_names[12] = {
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec"
+};
 
 // Initialize clock dimensions based on the actual clock size.
 static void init_clock_dimensions(struct clock_dimensions *dim, lv_coord_t clock_width) {
@@ -131,7 +152,7 @@ static void draw_filled_poly(const lv_point_t *points, uint16_t point_count, lv_
     poly_dsc.bg_color = color;
     poly_dsc.bg_opa = LV_OPA_COVER;
 
-    lv_canvas_draw_polygon(s_canvas, points, point_count, &poly_dsc);
+    lv_canvas_draw_polygon(screen_canvas, points, point_count, &poly_dsc);
 }
 
 static void draw_line(lv_point_t *points, int count, lv_color_t color, lv_coord_t width) {
@@ -142,7 +163,7 @@ static void draw_line(lv_point_t *points, int count, lv_color_t color, lv_coord_
     line_dsc.round_start = false;
     line_dsc.round_end = false;
 
-    lv_canvas_draw_line(s_canvas, points, count, &line_dsc);
+    lv_canvas_draw_line(screen_canvas, points, count, &line_dsc);
 }
 
 static void draw_tick(double_t angle_deg) {
@@ -217,9 +238,39 @@ static void draw_second_hand(double_t angle_deg) {
     draw_line(line_points, 2, AMIGA_ORANGE, 2);
 }
 
+static void draw_char(uint8_t ch, int x, int y) {
+
+    lv_color_t *dst_buf = (lv_color_t *)(lv_canvas_get_img(screen_canvas)->data);
+    lv_color_t *src_buf = (lv_color_t *)font_canvas_buf;
+
+    for (int row = 0; row < 16; row++) {
+        // stretch every row to double height
+        lv_color_t *src_row = &src_buf[row/2 * FONT_CANVAS_W + ch * 8];
+        lv_color_t *dst_row = &dst_buf[(y + row) * CANVAS_W + x];
+        memcpy(dst_row, src_row, 8 * sizeof(lv_color_t));
+    }
+}
+
+static void draw_string(const char *str, int x, int y) {
+    while (*str) {
+        draw_char(*str++, x, y);
+        x += 8;
+    }
+}
+
+static void draw_date_line(int day, int month, int year) {
+    char date_str[11];
+    snprintf(date_str, sizeof(date_str), "%2d %s %02d", day, month_names[month], year % 100);
+
+    int pos_x = (CANVAS_W - 9*8) / 2;
+    int pos_y = CANVAS_H - CLOCK_DATE_LINE_H/2 - FONT_CANVAS_H;
+    
+    draw_string(date_str, pos_x, pos_y);
+}
+
 static void draw_clock() {
     // Blue background
-    lv_canvas_fill_bg(s_canvas, AMIGA_BLUE, LV_OPA_COVER);
+    lv_canvas_fill_bg(screen_canvas, AMIGA_BLUE, LV_OPA_COVER);
 
     // Clock face
     lv_draw_rect_dsc_t dsc;
@@ -233,7 +284,7 @@ static void draw_clock() {
     int x = current_clock_dims->center.x - current_clock_dims->radius;
     int y = current_clock_dims->center.y - current_clock_dims->radius;
     int w = current_clock_dims->radius * 2;
-    lv_canvas_draw_rect(s_canvas, x, y, w, w, &dsc);
+    lv_canvas_draw_rect(screen_canvas, x, y, w, w, &dsc);
 
     // Draw min markers
     for (int i = 0; i < 60; i++) {
@@ -256,36 +307,65 @@ static void draw_clock() {
     if (show_seconds) {
         draw_second_hand(t.tm_sec * 6);
     }
+
+    if (show_date) {
+        draw_date_line(t.tm_mday, t.tm_mon, t.tm_year + 1900);
+    }
 }
 
 static void clock_timer_cb(lv_timer_t *) {
     draw_clock();
-    lv_obj_invalidate(s_canvas);
+    lv_obj_invalidate(screen_canvas);
+}
+
+static void init_font() {
+    ESP_LOGI(TAG, "Initializing font.");
+
+    ESP_LOGI(TAG, "Allocating font canvas buffer.");
+    size_t buf_size = LV_CANVAS_BUF_SIZE_TRUE_COLOR(FONT_CANVAS_W, FONT_CANVAS_H);
+    font_canvas_buf = heap_caps_malloc(buf_size, MALLOC_CAP_SPIRAM);
+
+    ESP_LOGI(TAG, "BUF-SIZE %u (w x h x size=%u x %u x %u)", buf_size, FONT_CANVAS_W, FONT_CANVAS_H, sizeof(lv_color_t));
+    ESP_LOGI(TAG, "BUF-SIZE %u", buf_size);
+
+    {
+        lv_color_t *buf = (lv_color_t *)font_canvas_buf;
+        for(int i = 0; i < 256; i++) {    
+            for(int y = 0; y < 8; y++) {
+                uint8_t b = font[i*8 + y];
+                for(int x = 0; x < 8; x++) {                    
+                    lv_color_t col = (b & (1 << (7 - x))) ? AMIGA_WHITE : AMIGA_BLUE;
+                    buf[y * FONT_CANVAS_W + i*8 + x] = col;
+                }
+            }
+        }
+    }
 }
 
 void amiga_clock_ui_create() {
     ESP_LOGI(TAG, "Creating Amiga clock UI.");
 
+    init_font();
+
     ESP_LOGI(TAG, "Configuring clock dimenstions.");
     init_clock_dimensions(&clock_dims_without_date, CANVAS_W-CANVAS_BORDER*2);
-    init_clock_dimensions(&clock_dims_with_date, CANVAS_W-CANVAS_BORDER*2-CLOCK_DATE_LINE_H);
-
-    amiga_clock_ui_configure(false /*show_date*/, true /*show_seconds*/);
-
+    init_clock_dimensions(&clock_dims_with_date, CANVAS_W-CANVAS_BORDER-CLOCK_DATE_LINE_H);
+    amiga_clock_ui_configure(true /*show_date*/, true /*show_seconds*/);
+    
     ESP_LOGI(TAG, "Allocating canvas buffer.");
     size_t buf_size = CANVAS_W * CANVAS_H * sizeof(lv_color_t);
-    s_canvas_buf = heap_caps_malloc(buf_size, MALLOC_CAP_SPIRAM);
+    screen_canvas_buf = heap_caps_malloc(buf_size, MALLOC_CAP_SPIRAM);
 
     ESP_LOGI(TAG, "Creating canvas.");
-    s_canvas = lv_canvas_create(lv_scr_act());
-    lv_canvas_set_buffer(s_canvas, s_canvas_buf, CANVAS_W, CANVAS_H, LV_IMG_CF_TRUE_COLOR);
-    lv_obj_center(s_canvas);
+    screen_canvas = lv_canvas_create(lv_scr_act());
+    lv_canvas_set_buffer(screen_canvas, screen_canvas_buf, CANVAS_W, CANVAS_H, LV_IMG_CF_TRUE_COLOR);
+    lv_obj_center(screen_canvas);
 
     draw_clock();
     ESP_LOGI(TAG, "Initial clock drawn.");
 
     ESP_LOGI(TAG, "Starting clock timer.");
-    s_timer = lv_timer_create(clock_timer_cb, 1000, NULL);
+    timer = lv_timer_create(clock_timer_cb, 1000, NULL);
     ESP_LOGI(TAG, "Clock timer started.");
 }
 
