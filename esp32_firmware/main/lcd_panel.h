@@ -37,6 +37,9 @@ lv_disp_t *lcd_panel_init(void);
 /** Set backlight 0-100 %. */
 void lcd_panel_set_backlight(uint8_t percent);
 
+/** Get the currently configured backlight 0-100 %. */
+uint8_t lcd_panel_get_backlight(void);
+
 #ifdef __cplusplus
 }
 #endif

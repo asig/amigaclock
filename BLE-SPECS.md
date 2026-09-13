@@ -9,6 +9,7 @@ The device exposes:
 1. The standard Bluetooth SIG Current Time Service for clock time
 2. A custom vendor-specific service for Wi‑Fi configuration and Wi‑Fi status
 3. A custom display configuration characteristic
+4. A custom backlight brightness characteristic
 
 This keeps time handling interoperable while making Wi‑Fi setup app-specific.
 
@@ -199,6 +200,29 @@ Each value is one byte:
 
 Read returns the current two-byte configuration. Write requests must contain exactly two bytes, and values other than `0` or `1` are rejected.
 
+### 2.4 Backlight characteristic
+
+Characteristic UUID:
+- `0xFFF4`
+
+Properties:
+- Read
+- Write
+
+Purpose:
+- configure the display backlight brightness
+
+Payload format:
+
+```text
+[percent]
+```
+
+`percent` is one byte in the range `0`..`100` (0 = off, 100 = full brightness).
+The backlight is dimmed using PWM, so any value in between is a valid brightness
+level. Read returns the currently configured percentage. Write requests must
+contain exactly one byte; values above `100` are rejected.
+
 ---
 
 ## 3) Why this is the best fit
@@ -235,6 +259,10 @@ This is the best BLE design for your requirements because:
 ### Configure display
 - read or write service `0xFFF0`, characteristic `0xFFF3`
 - send `[show_date][show_seconds]`
+
+### Configure backlight
+- read or write service `0xFFF0`, characteristic `0xFFF4`
+- send `[percent]` (0-100)
 
 ---
 

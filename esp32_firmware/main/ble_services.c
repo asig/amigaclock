@@ -35,6 +35,7 @@
 #include "services/gatt/ble_svc_gatt.h"
 
 #include "amiga_clock_ui.h"
+#include "lcd_panel.h"
 #include "wifi.h"
 
 static const char *TAG = "ble_services";
@@ -44,6 +45,7 @@ static const char *TAG = "ble_services";
 #define WIFI_WIFI_CFG_CHAR_UUID 0xFFF1
 #define WIFI_STATUS_CHAR_UUID 0xFFF2
 #define DISPLAY_CONFIG_CHAR_UUID 0xFFF3
+#define BACKLIGHT_CHAR_UUID 0xFFF4
 
 static uint8_t s_own_addr_type;
 
@@ -216,6 +218,30 @@ static int gatt_chr_access_display_config(uint16_t conn_handle, uint16_t attr_ha
     return BLE_ATT_ERR_UNLIKELY;
 }
 
+static int gatt_chr_access_backlight(uint16_t conn_handle, uint16_t attr_handle,
+                                     struct ble_gatt_access_ctxt *ctxt, void *arg)
+{
+    if (ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
+        uint8_t buf[1] = {0};
+        uint16_t len = OS_MBUF_PKTLEN(ctxt->om);
+        if (len != sizeof(buf) || os_mbuf_copydata(ctxt->om, 0, len, buf) != 0 ||
+            buf[0] > 100) {
+            return BLE_ATT_ERR_UNLIKELY;
+        }
+
+        lcd_panel_set_backlight(buf[0]);
+        return 0;
+    }
+
+    if (ctxt->op == BLE_GATT_ACCESS_OP_READ_CHR) {
+        uint8_t buf[1] = {lcd_panel_get_backlight()};
+        os_mbuf_append(ctxt->om, buf, sizeof(buf));
+        return 0;
+    }
+
+    return BLE_ATT_ERR_UNLIKELY;
+}
+
 static const struct ble_gatt_svc_def gatt_svr_svcs[] = {
     {
         .type = BLE_GATT_SVC_TYPE_PRIMARY,
@@ -246,6 +272,11 @@ static const struct ble_gatt_svc_def gatt_svr_svcs[] = {
             {
                 .uuid = BLE_UUID16_DECLARE(DISPLAY_CONFIG_CHAR_UUID),
                 .access_cb = gatt_chr_access_display_config,
+                .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE,
+            },
+            {
+                .uuid = BLE_UUID16_DECLARE(BACKLIGHT_CHAR_UUID),
+                .access_cb = gatt_chr_access_backlight,
                 .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE,
             },
             { 0 },

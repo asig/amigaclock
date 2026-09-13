@@ -38,6 +38,7 @@ static const char *TAG = "lcd_panel";
 static esp_lcd_panel_handle_t s_panel = NULL;
 static lv_disp_draw_buf_t s_draw_buf;
 static lv_disp_drv_t s_disp_drv;
+static uint8_t s_backlight_percent = 0;
 
 /* ------------------------------------------------------------------------
  * Backlight
@@ -82,10 +83,16 @@ void lcd_panel_set_backlight(uint8_t percent)
     if (percent > 100) {
         percent = 100;
     }
+    s_backlight_percent = percent;
     uint32_t max_duty = (1 << BACKLIGHT_LEDC_DUTY_RES) - 1;
     uint32_t duty = (max_duty * percent) / 100;
     ESP_ERROR_CHECK(ledc_set_duty(BACKLIGHT_LEDC_MODE, BACKLIGHT_LEDC_CHANNEL, duty));
     ESP_ERROR_CHECK(ledc_update_duty(BACKLIGHT_LEDC_MODE, BACKLIGHT_LEDC_CHANNEL));
+}
+
+uint8_t lcd_panel_get_backlight(void)
+{
+    return s_backlight_percent;
 }
 
 /* ------------------------------------------------------------------------
