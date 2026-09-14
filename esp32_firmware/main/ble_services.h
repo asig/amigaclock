@@ -27,7 +27,7 @@ extern "C" {
  * "Current Time Service" (0x1805) / characteristic "Current Time" (0x2A2B)
  * as well as its own app-specific BLE service for Wi-Fi configuration.
  */
-void ble_services_start(void);
+void ble_services_start();
 
 #ifdef __cplusplus
 }

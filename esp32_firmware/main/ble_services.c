@@ -285,8 +285,7 @@ static const struct ble_gatt_svc_def gatt_svr_svcs[] = {
     { 0 },
 };
 
-static int gatt_svr_init(void)
-{
+static int gatt_svr_init() {
     ble_svc_gap_init();
     ble_svc_gatt_init();
 
@@ -297,8 +296,9 @@ static int gatt_svr_init(void)
     return rc;
 }
 
-static void start_advertising(void)
-{
+static int gap_event_handler(struct ble_gap_event *event, void *arg);
+
+static void start_advertising() {
     struct ble_hs_adv_fields fields = {0};
     fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
     fields.name = (uint8_t *)DEVICE_NAME;
@@ -316,10 +316,39 @@ static void start_advertising(void)
     adv_params.conn_mode = BLE_GAP_CONN_MODE_UND;
     adv_params.disc_mode = BLE_GAP_DISC_MODE_GEN;
 
-    ble_gap_adv_start(s_own_addr_type, NULL, BLE_HS_FOREVER, &adv_params, NULL, NULL);
+    ble_gap_adv_start(s_own_addr_type, NULL, BLE_HS_FOREVER, &adv_params, gap_event_handler, NULL);
 }
 
-static void on_sync(void)
+static int gap_event_handler(struct ble_gap_event *event, void *arg) {
+    switch (event->type) {
+    case BLE_GAP_EVENT_CONNECT:
+        ESP_LOGI(TAG, "GAP event: BLE_GAP_EVENT_CONNECT");
+        ESP_LOGI(TAG, "Connection %s, status=%d",
+                 event->connect.status == 0 ? "established" : "failed",
+                 event->connect.status);
+        if (event->connect.status != 0) {
+            start_advertising();
+        }
+        return 0;
+
+    case BLE_GAP_EVENT_DISCONNECT:
+        ESP_LOGI(TAG, "GAP event: BLE_GAP_EVENT_DISCONNECT");
+        ESP_LOGI(TAG, "Connection disconnected, reason=%d", event->disconnect.reason);
+        start_advertising();
+        return 0;
+
+    case BLE_GAP_EVENT_ADV_COMPLETE:
+        ESP_LOGI(TAG, "GAP event: BLE_GAP_EVENT_ADV_COMPLETE");
+        start_advertising();
+        return 0;
+
+    default:
+        ESP_LOGI(TAG, "Unhandled GAP event: %d", event->type);
+        return 0;
+    }
+}
+
+static void on_sync()
 {
     ble_hs_id_infer_auto(0, &s_own_addr_type);
     start_advertising();
@@ -337,8 +366,8 @@ static void host_task(void *param)
     nimble_port_freertos_deinit();
 }
 
-void ble_services_start(void)
-{
+void ble_services_start() {
+    ESP_LOGI(TAG, "Starting BLE services...");
     esp_err_t ret = nimble_port_init();
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "nimble_port_init failed: %d", ret);
@@ -352,5 +381,7 @@ void ble_services_start(void)
     ble_svc_gap_device_name_set(DEVICE_NAME);
 
     nimble_port_freertos_init(host_task);
+
+    ESP_LOGI(TAG, "BLE services started.");
 }
 

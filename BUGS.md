@@ -5,7 +5,7 @@ please file them in github's bug-tracker.
 
 ## ESP32 Firmware
 
-[ ] BLE does not re-start advertising after a client disconnected.
+[X] BLE does not re-start advertising after a client disconnected.
 
 ## Unknown source
 
