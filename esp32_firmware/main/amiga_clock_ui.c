@@ -268,7 +268,7 @@ static void draw_date_line(int day, int month, int year) {
     draw_string(date_str, pos_x, pos_y);
 }
 
-static void draw_clock() {
+static void draw_clock(void) {
     // Blue background
     lv_canvas_fill_bg(screen_canvas, AMIGA_BLUE, LV_OPA_COVER);
 
@@ -318,7 +318,7 @@ static void clock_timer_cb(lv_timer_t *) {
     lv_obj_invalidate(screen_canvas);
 }
 
-static void init_font() {
+static void init_font(void) {
     ESP_LOGI(TAG, "Initializing font.");
 
     ESP_LOGI(TAG, "Allocating font canvas buffer.");
