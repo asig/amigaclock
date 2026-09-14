@@ -59,10 +59,9 @@ void app_main(void)
     wifi_init();
     ble_services_start();
 
-    ESP_LOGI(TAG, "Amiga clock running. Set time via BLE (Current Time Service, "
-                  "0x1805 / 0x2A2B), e.g. with nRF Connect.");
+    ESP_LOGI(TAG, "Amiga clock running.");
 
-    while (1) {
+    for(;;) {
         lv_timer_handler();
         vTaskDelay(pdMS_TO_TICKS(10));
     }
