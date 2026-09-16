@@ -38,6 +38,9 @@ static const char *TAG = "amiga_clock_ui";
 #define AMIGA_WHITE  lv_color_hex(0xffffff)
 #define AMIGA_ORANGE lv_color_hex(0xff8800) 
 
+// Height of a text line on the screen (Amiga font height is 8)
+#define TEXT_HEIGHT 16
+
 // Canvas dimensions
 #define CANVAS_W LCD_H_RES
 #define CANVAS_H LCD_V_RES
@@ -84,10 +87,6 @@ struct clock_dimensions {
 static lv_obj_t *screen_canvas;
 static lv_color_t *screen_canvas_buf;
 static lv_timer_t *timer;
-
-#define FONT_CANVAS_W (256*8)
-#define FONT_CANVAS_H (8)
-static uint8_t *font_canvas_buf;
 
 static struct clock_dimensions clock_dims_without_date;
 static struct clock_dimensions clock_dims_with_date;
@@ -239,15 +238,18 @@ static void draw_second_hand(double_t angle_deg) {
 }
 
 static void draw_char(uint8_t ch, int x, int y) {
-
     lv_color_t *dst_buf = (lv_color_t *)(lv_canvas_get_img(screen_canvas)->data);
-    lv_color_t *src_buf = (lv_color_t *)font_canvas_buf;
 
-    for (int row = 0; row < 16; row++) {
-        // stretch every row to double height
-        lv_color_t *src_row = &src_buf[row/2 * FONT_CANVAS_W + ch * 8];
-        lv_color_t *dst_row = &dst_buf[(y + row) * CANVAS_W + x];
-        memcpy(dst_row, src_row, 8 * sizeof(lv_color_t));
+    uint8_t *chdata = &font[ch*8];
+    dst_buf = dst_buf + y*CANVAS_W + x;
+    for (int j = 0; j < 8; j++) {
+        uint8_t v = *(chdata++);
+        for (int i = 0; i < 8; i++) {
+            if (v & (1 << (7-i))) {
+                dst_buf[i] = dst_buf[i+CANVAS_W] = AMIGA_WHITE;
+            }
+        }
+        dst_buf += 2*CANVAS_W;
     }
 }
 
@@ -263,7 +265,7 @@ static void draw_date_line(int day, int month, int year) {
     snprintf(date_str, sizeof(date_str), "%2d %s %02d", day, month_names[month], year % 100);
 
     int pos_x = (CANVAS_W - 9*8) / 2;
-    int pos_y = CANVAS_H - CLOCK_DATE_LINE_H/2 - FONT_CANVAS_H;
+    int pos_y = CANVAS_H - CLOCK_DATE_LINE_H/2 - TEXT_HEIGHT/2;
     
     draw_string(date_str, pos_x, pos_y);
 }
@@ -318,34 +320,8 @@ static void clock_timer_cb(lv_timer_t *) {
     lv_obj_invalidate(screen_canvas);
 }
 
-static void init_font(void) {
-    ESP_LOGI(TAG, "Initializing font.");
-
-    ESP_LOGI(TAG, "Allocating font canvas buffer.");
-    size_t buf_size = LV_CANVAS_BUF_SIZE_TRUE_COLOR(FONT_CANVAS_W, FONT_CANVAS_H);
-    font_canvas_buf = heap_caps_malloc(buf_size, MALLOC_CAP_SPIRAM);
-
-    ESP_LOGI(TAG, "BUF-SIZE %u (w x h x size=%u x %u x %u)", buf_size, FONT_CANVAS_W, FONT_CANVAS_H, sizeof(lv_color_t));
-    ESP_LOGI(TAG, "BUF-SIZE %u", buf_size);
-
-    {
-        lv_color_t *buf = (lv_color_t *)font_canvas_buf;
-        for(int i = 0; i < 256; i++) {    
-            for(int y = 0; y < 8; y++) {
-                uint8_t b = font[i*8 + y];
-                for(int x = 0; x < 8; x++) {                    
-                    lv_color_t col = (b & (1 << (7 - x))) ? AMIGA_WHITE : AMIGA_BLUE;
-                    buf[y * FONT_CANVAS_W + i*8 + x] = col;
-                }
-            }
-        }
-    }
-}
-
 void amiga_clock_ui_create(void) {
     ESP_LOGI(TAG, "Creating Amiga clock UI.");
-
-    init_font();
 
     ESP_LOGI(TAG, "Configuring clock dimenstions.");
     init_clock_dimensions(&clock_dims_without_date, CANVAS_W-CANVAS_BORDER*2);
