@@ -342,7 +342,7 @@ static void init_font(void) {
     }
 }
 
-void amiga_clock_ui_create() {
+void amiga_clock_ui_create(void) {
     ESP_LOGI(TAG, "Creating Amiga clock UI.");
 
     init_font();

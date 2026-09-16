@@ -29,7 +29,7 @@ extern "C" {
  *  1-Hz timer that redraws the hands and title bar on every second
  *  change. Must be called after lcd_panel_init() has registered an active
  *  LVGL display. */
-void amiga_clock_ui_create();
+void amiga_clock_ui_create(void);
 
 void amiga_clock_ui_configure(bool show_date, bool show_seconds);
 
