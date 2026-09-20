@@ -24,6 +24,14 @@ idf_component_register(
         "ble_services.c"
         "amiga_clock_ui.c"
         "fontdata.c"
+        "qjs_runtime.c"
     INCLUDE_DIRS "."
-    REQUIRES esp_lcd esp_timer driver esp_driver_ledc nvs_flash bt
+    REQUIRES 
+        esp_lcd 
+        esp_timer 
+        driver 
+        esp_driver_ledc 
+        nvs_flash 
+        bt
+        quickjs
 )

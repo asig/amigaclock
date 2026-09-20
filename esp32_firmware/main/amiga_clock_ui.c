@@ -23,6 +23,7 @@
 #include <stdatomic.h>
 #include <time.h>
 
+#include "esp_timer.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "lvgl.h"
@@ -270,6 +271,17 @@ static void draw_date_line(int day, int month, int year) {
     draw_string(date_str, pos_x, pos_y);
 }
 
+static time_t last_tick_time = 0;
+
+bool amiga_clock_ui_tick(void) {
+    struct tm t1, t2;
+    localtime_r(&last_tick_time, &t1);
+    last_tick_time = time(NULL);
+    localtime_r(&last_tick_time, &t2);
+
+    return t1.tm_sec != t2.tm_sec;
+}
+
 static void draw_clock(void) {
     // Blue background
     lv_canvas_fill_bg(screen_canvas, AMIGA_BLUE, LV_OPA_COVER);
@@ -297,9 +309,8 @@ static void draw_clock(void) {
         }    
     }
 
-    time_t now = time(NULL);
     struct tm t;
-    localtime_r(&now, &t);
+    localtime_r(&last_tick_time, &t);
     
     // Draw clock hands
     // Minute hand moves every 10 secs
@@ -315,9 +326,10 @@ static void draw_clock(void) {
     }
 }
 
-static void clock_timer_cb(lv_timer_t *) {
+void amiga_clock_ui_render(void) {
     draw_clock();
     lv_obj_invalidate(screen_canvas);
+
 }
 
 void amiga_clock_ui_create(void) {
@@ -339,10 +351,6 @@ void amiga_clock_ui_create(void) {
 
     draw_clock();
     ESP_LOGI(TAG, "Initial clock drawn.");
-
-    ESP_LOGI(TAG, "Starting clock timer.");
-    timer = lv_timer_create(clock_timer_cb, 1000, NULL);
-    ESP_LOGI(TAG, "Clock timer started.");
 }
 
 void amiga_clock_ui_configure(bool show_date_param, bool show_seconds_param) {

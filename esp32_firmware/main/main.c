@@ -20,6 +20,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "nvs_flash.h"
 #include "lvgl.h"
 
@@ -28,14 +29,24 @@
 #include "lcd_panel.h"
 #include "touch_panel.h"
 #include "wifi.h"
+#include "qjs_runtime.h"
 
 static const char *TAG = "main";
 
-static void lvgl_tick_task(void *arg)
-{
-    while (1) {
-        lv_tick_inc(5);
-        vTaskDelay(pdMS_TO_TICKS(5));
+static void main_loop(void *arg) {
+    TickType_t last_wake = xTaskGetTickCount();
+    const TickType_t period = pdMS_TO_TICKS(10); // 10 ms (100 Hz)
+
+    for (;;) {
+        lv_tick_inc(10);
+        bool updated = amiga_clock_ui_tick();
+        if (updated) {
+            amiga_clock_ui_render();
+        }
+
+        lv_timer_handler();
+        qjs_poll(10);
+        vTaskDelayUntil(&last_wake, period);
     }
 }
 
@@ -48,21 +59,25 @@ void app_main(void)
     }
     ESP_ERROR_CHECK(ret);
 
+    // Init order is not *that* critical, besides this:
+    // 1) LVGL needs to be initialized before creating the UI.
+    // 1) amiga_clock_ui_create() needs to be called BEFORE creating the
+    //    main loop task.
+    // 2) Main task needs to be created early so that there's a big enough 
+    //    block in the heap to satisfy its stack requirements.
+
     lv_init();
 
     lv_disp_t *disp = lcd_panel_init();
     touch_panel_init(disp);
 
-    xTaskCreate(lvgl_tick_task, "lvgl_tick", 2048, NULL, 5, NULL);
+    qjs_init_runtime();
 
     amiga_clock_ui_create();
+    xTaskCreatePinnedToCore(main_loop, "main_loop", 32*1024, NULL, 5, NULL, 0);
+    // xTaskCreate(main_loop, "main_loop", 32*1024, NULL, 5, NULL);
     wifi_init();
     ble_services_start();
 
     ESP_LOGI(TAG, "Amiga clock running.");
-
-    for(;;) {
-        lv_timer_handler();
-        vTaskDelay(pdMS_TO_TICKS(10));
-    }
 }

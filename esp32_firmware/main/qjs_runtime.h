@@ -17,30 +17,27 @@
  * along with AmigaClock.  If not, see <https://www.gnu.org/licenses/>.
  */
  
-#pragma once
-#include "lvgl.h"
+ #pragma once
 
-#ifdef __cplusplus
-extern "C" {
+#include "quickjs.h"
 
-#endif
+typedef enum {
+    QJS_MSG_EVENT, // Call the JS callback associated with m->id
+    QJS_MSG_LOAD, // Load and start the widget from m->data
+} qjs_msg_type_t;
 
-/** Builds the Amiga Workbench 1.2-style clock face and starts the
- *  1-Hz timer that redraws the hands and title bar on every second
- *  change. Must be called after lcd_panel_init() has registered an active
- *  LVGL display. */
-void amiga_clock_ui_create(void);
+typedef struct {
+    qjs_msg_type_t type;
+    uint32_t id;
+    uint8_t *data;
+} qjs_msg_t;
 
-void amiga_clock_ui_configure(bool show_date, bool show_seconds);
+// Initialize the QuickJS runtime environment.
+void qjs_init_runtime(void);
 
-void amiga_clock_ui_get_config(bool *show_date, bool *show_seconds);
+// Post a message to the QuickJS runtime message queue. Can be called from any task (BLE, Wi-Fi, ...).
+bool qjs_post(const qjs_msg_t *m);
 
-// Ticks the Amiga clock UI. Returns true if the UI needs to be redrawn.
-bool amiga_clock_ui_tick(void);
+// Poll the QuickJS runtime message queue. Should only be called from the UI task.
+void qjs_poll(uint32_t timeout_ms);
 
-// Renders the Amiga clock UI immediately. Only call this if amiga_clock_ui_tick() returned true.
-void amiga_clock_ui_render(void);
-
-#ifdef __cplusplus
-}
-#endif
