@@ -17,14 +17,14 @@
  
 idf_component_register(
     SRCS
-        "main.c"
+        "main.cpp"
         "lcd_panel.c"
         "touch_panel.c"
         "wifi.c"
         "ble_services.c"
-        "amiga_clock_ui.c"
-        "fontdata.c"
-        "qjs_runtime.c"
+        "amiga_clock_ui.cpp"
+        "fontdata.cpp"
+        "qjs_runtime.cpp"
     INCLUDE_DIRS "."
     REQUIRES 
         esp_lcd 

@@ -50,6 +50,8 @@ static void main_loop(void *arg) {
     }
 }
 
+extern "C" {
+
 void app_main(void)
 {
     esp_err_t ret = nvs_flash_init();
@@ -81,3 +83,5 @@ void app_main(void)
 
     ESP_LOGI(TAG, "Amiga clock running.");
 }
+
+} // extern "C"

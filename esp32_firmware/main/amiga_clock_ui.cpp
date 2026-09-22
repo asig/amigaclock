@@ -66,7 +66,7 @@ static const char *TAG = "amiga_clock_ui";
 // Clock dimensions scaled to the actual display resolution, including spacing
 #define CANVAS_BORDER 20
 
-extern uint8_t font[];
+extern const uint8_t font[];
 
 struct clock_dimensions {
     lv_point_t center;
@@ -96,7 +96,7 @@ static struct clock_dimensions *current_clock_dims;
 static bool show_date;
 static bool show_seconds;
 
-static char * const month_names[12] = {
+static const char * const month_names[12] = {
     "Jan",
     "Feb",
     "Mar",
@@ -140,8 +140,8 @@ static lv_point_t rotate_point(lv_point_t p, double rad) {
 
 static lv_point_t mv(lv_point_t pt, lv_point_t offset) {
     return (lv_point_t){
-        pt.x + offset.x,
-        pt.y + offset.y
+        (lv_coord_t)(pt.x + offset.x),
+        (lv_coord_t)(pt.y + offset.y)
     };
 }
 
@@ -169,10 +169,10 @@ static void draw_line(lv_point_t *points, int count, lv_color_t color, lv_coord_
 static void draw_tick(double_t angle_deg) {
     double rad = angle_deg * M_PI / 180.0;
 
-    int top = -current_clock_dims->radius + current_clock_dims->border_w + current_clock_dims->border_space;
+    lv_coord_t top = -current_clock_dims->radius + current_clock_dims->border_w + current_clock_dims->border_space;
     lv_point_t line_points[2];
     line_points[0] = mv(rotate_point((lv_point_t){0,top}, rad), current_clock_dims->center);
-    line_points[1] = mv(rotate_point((lv_point_t){0,top+current_clock_dims->tick_small_h}, rad), current_clock_dims->center);
+    line_points[1] = mv(rotate_point((lv_point_t){0,(lv_coord_t)(top+current_clock_dims->tick_small_h)}, rad), current_clock_dims->center);
     draw_line(line_points, 2, AMIGA_BLACK, 2);
 }
 
@@ -180,12 +180,12 @@ static void draw_big_tick(double_t angle_deg) {
     double rad = angle_deg * M_PI / 180.0;
 
     // poly points with offsets to center, so that we can just rotate them
-    int top = -current_clock_dims->radius + current_clock_dims->border_w + current_clock_dims->border_space;
+    lv_coord_t top = -current_clock_dims->radius + current_clock_dims->border_w + current_clock_dims->border_space;
     lv_point_t poly_points[] = {
         {0,                   top},
-        {current_clock_dims->tick_big_w/2,  top + current_clock_dims->tick_big_h/2},
-        {0,                   top + current_clock_dims->tick_big_h},
-        {-current_clock_dims->tick_big_w/2, top + current_clock_dims->tick_big_h/2}
+        {(lv_coord_t)(current_clock_dims->tick_big_w/2),  (lv_coord_t)(top + current_clock_dims->tick_big_h/2)},
+        {0,                   (lv_coord_t)(top + current_clock_dims->tick_big_h)},
+        {(lv_coord_t)(-current_clock_dims->tick_big_w/2), (lv_coord_t)(top + current_clock_dims->tick_big_h/2)}
     };
     for (int i = 0; i < 4; i++) {
         poly_points[i] = mv(rotate_point(poly_points[i], rad), current_clock_dims->center);
@@ -198,12 +198,12 @@ static void draw_minute_hand(double_t angle_deg) {
     double rad = angle_deg * M_PI / 180.0;
 
     // poly points with offsets to center, so that we can just rotate them
-    int top = -current_clock_dims->hand_min_top - current_clock_dims->hand_min_bottom;
+    lv_coord_t top = -current_clock_dims->hand_min_top - current_clock_dims->hand_min_bottom;
     lv_point_t poly_points[] = {
         {0,                   top},
-        {current_clock_dims->hand_min_width/2,  top + current_clock_dims->hand_min_top},
-        {0,                   top + current_clock_dims->hand_min_top + current_clock_dims->hand_min_bottom},
-        {-current_clock_dims->hand_min_width/2, top + current_clock_dims->hand_min_top}
+        {(lv_coord_t)(current_clock_dims->hand_min_width/2),  (lv_coord_t)(top + current_clock_dims->hand_min_top)},
+        {0,                   (lv_coord_t)(top + current_clock_dims->hand_min_top + current_clock_dims->hand_min_bottom)},
+        {(lv_coord_t)(-current_clock_dims->hand_min_width/2), (lv_coord_t)(top + current_clock_dims->hand_min_top)}
     };
     for (int i = 0; i < 4; i++) {
         poly_points[i] = mv(rotate_point(poly_points[i], rad), current_clock_dims->center);
@@ -215,12 +215,12 @@ static void draw_hour_hand(double_t angle_deg) {
     double rad = angle_deg * M_PI / 180.0;
 
     // poly points with offsets to center, so that we can just rotate them
-    int top = -current_clock_dims->hand_hour_top - current_clock_dims->hand_hour_bottom;
+    lv_coord_t top = -current_clock_dims->hand_hour_top - current_clock_dims->hand_hour_bottom;
     lv_point_t poly_points[] = {
         {0,                   top},
-        {current_clock_dims->hand_hour_width/2,  top + current_clock_dims->hand_hour_top},
-        {0,                   top + current_clock_dims->hand_hour_top + current_clock_dims->hand_hour_bottom},
-        {-current_clock_dims->hand_hour_width/2, top + current_clock_dims->hand_hour_top}
+        {(lv_coord_t)(current_clock_dims->hand_hour_width/2),  (lv_coord_t)(top + current_clock_dims->hand_hour_top)},
+        {0,                   (lv_coord_t)(top + current_clock_dims->hand_hour_top + current_clock_dims->hand_hour_bottom)},
+        {(lv_coord_t)(-current_clock_dims->hand_hour_width/2), (lv_coord_t)(top + current_clock_dims->hand_hour_top)}
     };
     for (int i = 0; i < 4; i++) {
         poly_points[i] = mv(rotate_point(poly_points[i], rad), current_clock_dims->center);
@@ -231,7 +231,7 @@ static void draw_hour_hand(double_t angle_deg) {
 static void draw_second_hand(double_t angle_deg) {
     double rad = angle_deg * M_PI / 180.0;
 
-    int top = -current_clock_dims->hand_min_top - current_clock_dims->hand_min_bottom;
+    lv_coord_t top = (lv_coord_t)(-current_clock_dims->hand_min_top - current_clock_dims->hand_min_bottom);
     lv_point_t line_points[2];
     line_points[0] = mv(rotate_point((lv_point_t){0,top}, rad), current_clock_dims->center);
     line_points[1] = mv(rotate_point((lv_point_t){0,0}, rad), current_clock_dims->center);
@@ -241,7 +241,7 @@ static void draw_second_hand(double_t angle_deg) {
 static void draw_char(uint8_t ch, int x, int y) {
     lv_color_t *dst_buf = (lv_color_t *)(lv_canvas_get_img(screen_canvas)->data);
 
-    uint8_t *chdata = &font[ch*8];
+    const uint8_t *chdata = &font[ch*8];
     dst_buf = dst_buf + y*CANVAS_W + x;
     for (int j = 0; j < 8; j++) {
         uint8_t v = *(chdata++);
@@ -342,7 +342,7 @@ void amiga_clock_ui_create(void) {
     
     ESP_LOGI(TAG, "Allocating canvas buffer.");
     size_t buf_size = CANVAS_W * CANVAS_H * sizeof(lv_color_t);
-    screen_canvas_buf = heap_caps_malloc(buf_size, MALLOC_CAP_SPIRAM);
+    screen_canvas_buf = (lv_color_t *)heap_caps_malloc(buf_size, MALLOC_CAP_SPIRAM);
 
     ESP_LOGI(TAG, "Creating canvas.");
     screen_canvas = lv_canvas_create(lv_scr_act());

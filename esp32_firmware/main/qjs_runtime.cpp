@@ -105,7 +105,7 @@ static void qjs_free_widget(struct qjs_widget *w) {
 }
 
 static struct qjs_widget *qjs_load_widget(uint8_t *data) {
-    struct qjs_widget *w = heap_caps_calloc(1, sizeof(struct qjs_widget), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    struct qjs_widget *w = (qjs_widget *)heap_caps_calloc(1, sizeof(struct qjs_widget), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     if (!w) return NULL;
     w->ctx = qjs_create_context();
     if (!w->ctx) {
