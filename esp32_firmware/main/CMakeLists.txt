@@ -22,6 +22,7 @@ idf_component_register(
         "touch_panel.cpp"
         "wifi.c"
         "ble_services.c"
+        "ble_services.cpp"
         "fontdata.cpp"
         "qjs_runtime.cpp"
         "graphics.cpp"

@@ -17,7 +17,7 @@
  * along with AmigaClock.  If not, see <https://www.gnu.org/licenses/>.
  */
 
- #include "ble_services.h"
+#include "ble_services.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -36,8 +36,6 @@
 
 #include "lcd_panel.h"
 #include "wifi.h"
-// #include "widgets/widget.h"
-// #include "widgets/amiga_clock_widget.h"
 
 static const char *TAG = "ble_services";
 #define DEVICE_NAME "AmigaClock"
@@ -90,7 +88,7 @@ static int set_time_from_buffer(const uint8_t *buf, size_t len)
 
     struct timeval tv = {.tv_sec = epoch, .tv_usec = 0};
     settimeofday(&tv, NULL);
-    ESP_LOGI(TAG, "Zeit via BLE gesetzt: %04d-%02d-%02d %02d:%02d:%02d",
+    ESP_LOGI(TAG, "Time set via BLE: %04d-%02d-%02d %02d:%02d:%02d",
              year, buf[2], buf[3], buf[4], buf[5], buf[6]);
     return 0;
 }
@@ -115,7 +113,7 @@ static void fill_wifi_status_bytes(uint8_t *buf, size_t *out_len)
 }
 
 static int gatt_chr_access_current_time(uint16_t conn_handle, uint16_t attr_handle,
-                                         struct ble_gatt_access_ctxt *ctxt, void *arg)
+                                        struct ble_gatt_access_ctxt *ctxt, void *arg)
 {
     if (ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
         uint8_t buf[10] = {0};
@@ -203,12 +201,7 @@ static int gatt_chr_access_display_config(uint16_t conn_handle, uint16_t attr_ha
             return BLE_ATT_ERR_UNLIKELY;
         }
 
-        // TODO(asigner): IMPLEMENT THIS!
-        // widgets::Widget *w = widgets::get_widget();
-        // if (w) {
-        //     w->set_property(widgets::AmigaClockWidget::PROPERTY_SHOW_DATE, buf[0] != 0 ? "true" : "false");
-        //     w->set_property(widgets::AmigaClockWidget::PROPERTY_SHOW_SECONDS, buf[1] != 0 ? "true" : "false");
-        // }
+        ble_services_apply_display_config(buf[0] != 0, buf[1] != 0);
 
         return 0;
     }
@@ -217,14 +210,7 @@ static int gatt_chr_access_display_config(uint16_t conn_handle, uint16_t attr_ha
         bool show_date = false;
         bool show_seconds = false;
 
-        // widgets::Widget *w = widgets::get_widget();
-        // if (w) {
-        //     std::string val = w->get_property(widgets::AmigaClockWidget::PROPERTY_SHOW_DATE);
-        //     show_date = (val == "true");
-
-        //     val = w->get_property(widgets::AmigaClockWidget::PROPERTY_SHOW_SECONDS);
-        //     show_seconds = (val == "true");
-        // }
+        ble_services_get_display_config(&show_date, &show_seconds);
 
         uint8_t buf[2] = {show_date, show_seconds};
         os_mbuf_append(ctxt->om, buf, sizeof(buf));
@@ -400,4 +386,3 @@ void ble_services_start() {
 
     ESP_LOGI(TAG, "BLE services started.");
 }
-

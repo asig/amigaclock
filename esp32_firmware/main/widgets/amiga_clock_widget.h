@@ -29,8 +29,8 @@ struct ClockDimensions;
 
 class AmigaClockWidget : public Widget {
 public:
-    const std::string PROPERTY_SHOW_DATE = "show_date";
-    const std::string PROPERTY_SHOW_SECONDS = "show_seconds";
+    static const std::string PROPERTY_SHOW_DATE;
+    static const std::string PROPERTY_SHOW_SECONDS;
     
     AmigaClockWidget();
     virtual ~AmigaClockWidget();
@@ -59,24 +59,3 @@ private:
 };
 
 } // namespace widgets
-
-
-// /** Builds the Amiga Workbench 1.2-style clock face and starts the
-//  *  1-Hz timer that redraws the hands and title bar on every second
-//  *  change. Must be called after lcd_panel_init() has registered an active
-//  *  LVGL display. */
-// void amiga_clock_ui_create(void);
-
-// void amiga_clock_ui_configure(bool show_date, bool show_seconds);
-
-// void amiga_clock_ui_get_config(bool *show_date, bool *show_seconds);
-
-// // Ticks the Amiga clock UI. Returns true if the UI needs to be redrawn.
-// bool amiga_clock_ui_tick(void);
-
-// // Renders the Amiga clock UI immediately. Only call this if amiga_clock_ui_tick() returned true.
-// void amiga_clock_ui_render(void);
-
-// #ifdef __cplusplus
-// }
-// #endif

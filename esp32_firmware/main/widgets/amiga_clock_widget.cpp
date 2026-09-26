@@ -145,6 +145,8 @@ static lv_point_t mv(lv_point_t pt, lv_point_t offset) {
 
 static time_t last_tick_time = 0;
 
+const std::string widgets::AmigaClockWidget::PROPERTY_SHOW_DATE = "show_date";
+const std::string widgets::AmigaClockWidget::PROPERTY_SHOW_SECONDS = "show_seconds";
 
 AmigaClockWidget::AmigaClockWidget() {
     static bool initialized = false;
@@ -206,7 +208,6 @@ void AmigaClockWidget::render() {
     if (show_date) {
         draw_date_line(t.tm_mday, t.tm_mon, t.tm_year + 1900);
     }
-
 }
 
 void AmigaClockWidget::set_property(const std::string &name, const std::string &value) {
@@ -215,6 +216,7 @@ void AmigaClockWidget::set_property(const std::string &name, const std::string &
     } else if (name == PROPERTY_SHOW_SECONDS) {
         show_seconds = (value == "true");
     }
+    pick_clock_dimensions();
 }
 
 std::string AmigaClockWidget::get_property(const std::string &name) const {
