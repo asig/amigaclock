@@ -19,7 +19,7 @@ idf_component_register(
     SRCS
         "main.cpp"
         "lcd_panel.c"
-        "touch_panel.c"
+        "touch_panel.cpp"
         "wifi.c"
         "ble_services.c"
         "fontdata.cpp"

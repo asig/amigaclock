@@ -49,17 +49,35 @@ void touch_panel_init(lv_disp_t *disp)
 {
     i2c_master_bus_config_t bus_config = {
         .i2c_port = I2C_NUM_0,
-        .sda_io_num = PIN_TOUCH_I2C_SDA,
-        .scl_io_num = PIN_TOUCH_I2C_SCL,
+        .sda_io_num = (gpio_num_t)PIN_TOUCH_I2C_SDA,
+        .scl_io_num = (gpio_num_t)PIN_TOUCH_I2C_SCL,
         .clk_source = I2C_CLK_SRC_DEFAULT,
         .glitch_ignore_cnt = 7,
-        .flags.enable_internal_pullup = true,
-    };
+        .intr_priority = 0,
+        .trans_queue_depth = 0,
+        .flags = {
+            .enable_internal_pullup = true,
+            .allow_pd = 0,
+        },
+    };    
     ESP_ERROR_CHECK(i2c_new_master_bus(&bus_config, &s_i2c_bus));
 
     esp_lcd_panel_io_handle_t tp_io_handle = NULL;
-    esp_lcd_panel_io_i2c_config_t tp_io_config = ESP_LCD_TOUCH_IO_I2C_GT911_CONFIG();
-    tp_io_config.scl_speed_hz = 400000;
+    esp_lcd_panel_io_i2c_config_t tp_io_config = {
+        .dev_addr = ESP_LCD_TOUCH_IO_I2C_GT911_ADDRESS,
+        .scl_speed_hz = 400000,
+        .control_phase_bytes = 1,
+        .dc_bit_offset = 0,
+        .lcd_cmd_bits = 16,
+        .lcd_param_bits = 0,
+        .on_color_trans_done = nullptr,
+        .user_ctx = nullptr,
+        .flags = {
+            .dc_low_on_data = 0,
+            .disable_control_phase = 1,
+        },
+        .transaction_timeout_ms = 0,
+    };
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c(s_i2c_bus, &tp_io_config, &tp_io_handle));
 
     esp_lcd_touch_config_t tp_cfg = {
@@ -67,11 +85,16 @@ void touch_panel_init(lv_disp_t *disp)
         .y_max = LCD_V_RES,
         .rst_gpio_num = PIN_TOUCH_RST,
         .int_gpio_num = PIN_TOUCH_INT,
+        .levels = {},
         .flags = {
             .swap_xy = 0,
             .mirror_x = 0,
             .mirror_y = 0,
         },
+        .process_coordinates = nullptr,
+        .interrupt_callback = nullptr,
+        .user_data = nullptr,
+        .driver_data = nullptr,
     };
     esp_err_t err = esp_lcd_touch_new_i2c_gt911(tp_io_handle, &tp_cfg, &s_touch);
     if (err != ESP_OK) {
