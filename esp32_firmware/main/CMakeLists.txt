@@ -22,9 +22,11 @@ idf_component_register(
         "touch_panel.c"
         "wifi.c"
         "ble_services.c"
-        "amiga_clock_ui.cpp"
         "fontdata.cpp"
         "qjs_runtime.cpp"
+        "graphics.cpp"
+        "widgets/widget.cpp"
+        "widgets/amiga_clock_widget.cpp"
     INCLUDE_DIRS "."
     REQUIRES 
         esp_lcd 

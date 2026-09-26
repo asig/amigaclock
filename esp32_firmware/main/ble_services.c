@@ -34,9 +34,10 @@
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
 
-#include "amiga_clock_ui.h"
 #include "lcd_panel.h"
 #include "wifi.h"
+// #include "widgets/widget.h"
+// #include "widgets/amiga_clock_widget.h"
 
 static const char *TAG = "ble_services";
 #define DEVICE_NAME "AmigaClock"
@@ -202,14 +203,29 @@ static int gatt_chr_access_display_config(uint16_t conn_handle, uint16_t attr_ha
             return BLE_ATT_ERR_UNLIKELY;
         }
 
-        amiga_clock_ui_configure(buf[0] != 0, buf[1] != 0);
+        // TODO(asigner): IMPLEMENT THIS!
+        // widgets::Widget *w = widgets::get_widget();
+        // if (w) {
+        //     w->set_property(widgets::AmigaClockWidget::PROPERTY_SHOW_DATE, buf[0] != 0 ? "true" : "false");
+        //     w->set_property(widgets::AmigaClockWidget::PROPERTY_SHOW_SECONDS, buf[1] != 0 ? "true" : "false");
+        // }
+
         return 0;
     }
 
     if (ctxt->op == BLE_GATT_ACCESS_OP_READ_CHR) {
         bool show_date = false;
         bool show_seconds = false;
-        amiga_clock_ui_get_config(&show_date, &show_seconds);
+
+        // widgets::Widget *w = widgets::get_widget();
+        // if (w) {
+        //     std::string val = w->get_property(widgets::AmigaClockWidget::PROPERTY_SHOW_DATE);
+        //     show_date = (val == "true");
+
+        //     val = w->get_property(widgets::AmigaClockWidget::PROPERTY_SHOW_SECONDS);
+        //     show_seconds = (val == "true");
+        // }
+
         uint8_t buf[2] = {show_date, show_seconds};
         os_mbuf_append(ctxt->om, buf, sizeof(buf));
         return 0;

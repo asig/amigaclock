@@ -18,29 +18,30 @@
  */
  
 #pragma once
+
+#include <string>
+#include <vector>
+
 #include "lvgl.h"
 
-#ifdef __cplusplus
-extern "C" {
+namespace widgets {
 
-#endif
+class Widget {
+public:
+    Widget() = default;
+    virtual ~Widget() = default;
 
-/** Builds the Amiga Workbench 1.2-style clock face and starts the
- *  1-Hz timer that redraws the hands and title bar on every second
- *  change. Must be called after lcd_panel_init() has registered an active
- *  LVGL display. */
-void amiga_clock_ui_create(void);
+    virtual bool tick() = 0;
+    virtual void render() = 0;
 
-void amiga_clock_ui_configure(bool show_date, bool show_seconds);
+    virtual std::vector<std::string> get_property_names() const = 0;
 
-void amiga_clock_ui_get_config(bool *show_date, bool *show_seconds);
+    virtual void set_property(const std::string &name, const std::string &value) = 0;
+    virtual std::string get_property(const std::string &name) const = 0;
+};
 
-// Ticks the Amiga clock UI. Returns true if the UI needs to be redrawn.
-bool amiga_clock_ui_tick(void);
+void set_widget(Widget *widget);
+Widget *get_widget();
 
-// Renders the Amiga clock UI immediately. Only call this if amiga_clock_ui_tick() returned true.
-void amiga_clock_ui_render(void);
+} // namespace widgets
 
-#ifdef __cplusplus
-}
-#endif

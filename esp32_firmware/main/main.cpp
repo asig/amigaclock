@@ -25,11 +25,17 @@
 #include "lvgl.h"
 
 #include "ble_services.h"
-#include "amiga_clock_ui.h"
+#include "widgets/widget.h"
+#include "widgets/amiga_clock_widget.h"
+#include "graphics.h"
+
+// #include "amiga_clock_ui.h"
+
 #include "lcd_panel.h"
 #include "touch_panel.h"
 #include "wifi.h"
 #include "qjs_runtime.h"
+#include "widgets/widget.h"
 
 static const char *TAG = "main";
 
@@ -39,13 +45,15 @@ static void main_loop(void *arg) {
 
     for (;;) {
         lv_tick_inc(10);
-        bool updated = amiga_clock_ui_tick();
+        widgets::Widget *w = widgets::get_widget();
+        bool updated = w->tick();
         if (updated) {
-            amiga_clock_ui_render();
+            w->render();
         }
 
         lv_timer_handler();
-        qjs_poll(10);
+        qjs_poll(10); // TODO(asigner): Turn this into a generic event queue!
+        
         vTaskDelayUntil(&last_wake, period);
     }
 }
@@ -75,9 +83,11 @@ void app_main(void)
 
     qjs_init_runtime();
 
-    amiga_clock_ui_create();
+    graphics::init();
+    auto *w = new widgets::AmigaClockWidget();
+    widgets::set_widget(w);
+
     xTaskCreatePinnedToCore(main_loop, "main_loop", 32*1024, NULL, 5, NULL, 0);
-    // xTaskCreate(main_loop, "main_loop", 32*1024, NULL, 5, NULL);
     wifi_init();
     ble_services_start();
 

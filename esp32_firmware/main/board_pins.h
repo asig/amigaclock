@@ -75,8 +75,8 @@
 // ---- Touch GT911 (I2C) ----
 #define PIN_TOUCH_I2C_SDA   19
 #define PIN_TOUCH_I2C_SCL   45
-#define PIN_TOUCH_RST       -1   // not separately wired on most boards
-#define PIN_TOUCH_INT       -1   // same here -> use polling instead of interrupt
+#define PIN_TOUCH_RST       GPIO_NUM_NC   // not separately wired on most boards
+#define PIN_TOUCH_INT       GPIO_NUM_NC   // same here -> use polling instead of interrupt
 
 #define LCD_H_RES           480
 #define LCD_V_RES           480
