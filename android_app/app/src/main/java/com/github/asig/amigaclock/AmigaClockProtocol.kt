@@ -17,6 +17,7 @@ object AmigaClockProtocol {
     val DISPLAY_SERVICE_UUID: UUID = UUID.fromString("0000fff0-0000-1000-8000-00805f9b34fb")
     val DISPLAY_CHAR_UUID: UUID = UUID.fromString("0000fff3-0000-1000-8000-00805f9b34fb")
     val BACKLIGHT_CHAR_UUID: UUID = UUID.fromString("0000fff4-0000-1000-8000-00805f9b34fb")
+    val RESOLUTION_CHAR_UUID: UUID = UUID.fromString("0000fff5-0000-1000-8000-00805f9b34fb")
 
     data class WifiStatus(val status: Int, val ssid: String, val ip: String) {
         val statusText: String
@@ -72,6 +73,11 @@ object AmigaClockProtocol {
         return byteArrayOf(clamped.toByte())
     }
 
+    /** Packt [resolution] (0=hires, 1=lores) */
+    fun buildResolutionPayload(lores: Boolean): ByteArray {
+        return byteArrayOf(if (lores) 1.toByte() else 0.toByte())
+    }
+
     /** Liest [status][ssid_len][ssid...][ip[4]] */
     fun parseWifiStatus(data: ByteArray): WifiStatus? {
         if (data.size < 2) return null
@@ -97,5 +103,11 @@ object AmigaClockProtocol {
     fun parseBacklight(data: ByteArray): Int? {
         if (data.isEmpty()) return null
         return data[0].toInt() and 0xFF
+    }
+
+    /** Liest [resolution] (0=hires, 1=lores) */
+    fun parseResolution(data: ByteArray): Boolean? {
+        if (data.isEmpty()) return null
+        return data[0].toInt() != 0
     }
 }

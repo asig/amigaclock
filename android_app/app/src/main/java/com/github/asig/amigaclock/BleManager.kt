@@ -28,6 +28,7 @@ class BleManager(private val context: Context) {
     val wifiStatus = MutableStateFlow<AmigaClockProtocol.WifiStatus?>(null)
     val displayConfig = MutableStateFlow<AmigaClockProtocol.DisplayConfig?>(null)
     val backlightPercent = MutableStateFlow<Int?>(null)
+    val resolution = MutableStateFlow<Boolean?>(null)
     val logMessage = MutableStateFlow("Bereit")
 
     private val scanCallback = object : ScanCallback() {
@@ -50,6 +51,7 @@ class BleManager(private val context: Context) {
                 wifiStatus.value = null
                 displayConfig.value = null
                 backlightPercent.value = null
+                resolution.value = null
                 logMessage.value = "Verbindung getrennt"
             }
         }
@@ -109,6 +111,11 @@ class BleManager(private val context: Context) {
             }
             AmigaClockProtocol.BACKLIGHT_CHAR_UUID -> {
                 if (data != null) backlightPercent.value = AmigaClockProtocol.parseBacklight(data)
+                // Kette fortsetzen: Resolution lesen
+                readResolution()
+            }
+            AmigaClockProtocol.RESOLUTION_CHAR_UUID -> {
+                if (data != null) resolution.value = AmigaClockProtocol.parseResolution(data)
                 logMessage.value = "Status aktualisiert"
             }
         }
@@ -195,6 +202,25 @@ class BleManager(private val context: Context) {
         readCharacteristic(
             AmigaClockProtocol.DISPLAY_SERVICE_UUID,
             AmigaClockProtocol.BACKLIGHT_CHAR_UUID
+        )
+    }
+
+    fun sendResolution(lores: Boolean) {
+        // Lokalen Zustand sofort nachführen
+        resolution.value = lores
+
+        val payload = AmigaClockProtocol.buildResolutionPayload(lores)
+        writeCharacteristic(
+            AmigaClockProtocol.DISPLAY_SERVICE_UUID,
+            AmigaClockProtocol.RESOLUTION_CHAR_UUID,
+            payload
+        )
+    }
+
+    fun readResolution() {
+        readCharacteristic(
+            AmigaClockProtocol.DISPLAY_SERVICE_UUID,
+            AmigaClockProtocol.RESOLUTION_CHAR_UUID
         )
     }
 

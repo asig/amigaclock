@@ -23,6 +23,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenu
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -87,11 +91,13 @@ fun AmigaClockScreen(ble: BleManager) {
     val wifiStatus by ble.wifiStatus.collectAsState()
     val displayConfig by ble.displayConfig.collectAsState()
     val backlightPercent by ble.backlightPercent.collectAsState()
+    val resolution by ble.resolution.collectAsState()
     val logMessage by ble.logMessage.collectAsState()
 
     var ssid by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var sliderPosition by remember { mutableFloatStateOf(100f) }
+    var resolutionExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(backlightPercent) {
         backlightPercent?.let {
@@ -261,6 +267,60 @@ fun AmigaClockScreen(ble: BleManager) {
                             Spacer(modifier = Modifier.width(8.dp))
                             OutlinedButton(onClick = { ble.readBacklight() }) {
                                 Text("Helligkeit abfragen")
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // 5. Display Auflösung
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            "5. Display Auflösung (0xFFF5)",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        val isLores = resolution ?: false
+                        Text(
+                            "Aktuelle Auflösung: ${if (isLores) "Lores (Low Resolution)" else "Hires (High Resolution)"}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            ExposedDropdownMenuBox(
+                                expanded = resolutionExpanded,
+                                onExpandedChange = { resolutionExpanded = it },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                OutlinedTextField(
+                                    value = if (isLores) "Lores" else "Hires",
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = resolutionExpanded) },
+                                    modifier = Modifier
+                                        .menuAnchor()
+                                        .fillMaxWidth()
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = resolutionExpanded,
+                                    onDismissRequest = { resolutionExpanded = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Hires") },
+                                        onClick = {
+                                            ble.sendResolution(false)
+                                            resolutionExpanded = false
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Lores") },
+                                        onClick = {
+                                            ble.sendResolution(true)
+                                            resolutionExpanded = false
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
