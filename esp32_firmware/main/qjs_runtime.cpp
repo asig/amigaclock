@@ -58,6 +58,10 @@ static const JSMallocFunctions mf = {
     qjs_calloc, qjs_malloc, qjs_free, qjs_realloc, qjs_usable_size
 };
 
+static void qjs_add_standard_functions(JSContext *ctx) {
+    // TODO: Register standard functions in the QuickJS context.
+}
+
 void qjs_init_runtime(void) {
     s_queue = xQueueCreate(16, sizeof(qjs_msg_t));
     rt = JS_NewRuntime2(&mf, NULL);
@@ -71,6 +75,9 @@ JSContext *qjs_create_context() {
         return NULL;
     }
     JSContext *ctx = JS_NewContext(rt);
+
+    qjs_add_standard_functions(ctx);
+    
     return ctx;
 }
 

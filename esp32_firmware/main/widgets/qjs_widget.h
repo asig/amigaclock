@@ -19,28 +19,30 @@
  
 #pragma once
 
-#include "lvgl.h"
+#include "quickjs/quickjs.h"
 
-#include "board_pins.h" // LCD_H_RES and LCD_V_RES
+#include "qjs_runtime.h"
+#include "widgets/widget.h"
 
-namespace graphics {
+namespace widgets {
 
-const constexpr int CANVAS_W = LCD_H_RES; 
-const constexpr int CANVAS_H = LCD_V_RES; 
+struct ClockDimensions;
 
-const constexpr int TEXT_HEIGHT = 16;
+class QjsWidget : public Widget {
+public:
+    QjsWidget();
+    virtual ~QjsWidget();
 
-void init();
+    bool tick() override;
+    void render() override;
 
-void clear(lv_color_t color);
+    void set_property(const std::string &name, const std::string &value) override;
+    std::string get_property(const std::string &name) const override;
 
-void fill_circle(int x, int y, int w, int h, lv_color_t color, lv_color_t border_col, int border_width);
+    std::vector<std::string> get_property_names() const override;
 
+private:
+    JSContext *js_ctx;
+};
 
-void draw_char(uint8_t ch, int x, int y, lv_color_t fg, lv_color_t bg);
-void draw_string(const char *str, int x, int y, lv_color_t fg, lv_color_t bg);
-
-void draw_filled_poly(const lv_point_t *points, uint16_t point_count, lv_color_t color);
-void draw_line(lv_point_t *points, int count, lv_color_t color, lv_coord_t width);
-
-}
+} // namespace widgets

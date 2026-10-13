@@ -27,7 +27,7 @@
 #include "ble_services.h"
 #include "widgets/widget.h"
 #include "widgets/amiga_clock_widget.h"
-#include "graphics.h"
+//#include "graphics.h"
 
 // #include "amiga_clock_ui.h"
 
@@ -46,14 +46,14 @@ static void main_loop(void *arg) {
     for (;;) {
         lv_tick_inc(10);
         widgets::Widget *w = widgets::get_widget();
-        bool updated = w->tick();
-        if (updated) {
-            w->render();
+        if (w) {
+            bool updated = w->tick();
+            if (updated) {
+                w->render();
+            }
+            lv_timer_handler();
+            qjs_poll(10); // TODO(asigner): Turn this into a generic event queue!
         }
-
-        lv_timer_handler();
-        qjs_poll(10); // TODO(asigner): Turn this into a generic event queue!
-        
         vTaskDelayUntil(&last_wake, period);
     }
 }
@@ -83,7 +83,7 @@ void app_main(void)
 
     qjs_init_runtime();
 
-    graphics::init();
+    //graphics::init();
     auto *w = new widgets::AmigaClockWidget();
     widgets::set_widget(w);
 

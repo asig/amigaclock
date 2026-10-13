@@ -25,7 +25,7 @@ idf_component_register(
         "ble_services.cpp"
         "fontdata.cpp"
         "qjs_runtime.cpp"
-        "graphics.cpp"
+        "canvas.cpp"
         "widgets/widget.cpp"
         "widgets/amiga_clock_widget.cpp"
     INCLUDE_DIRS "."

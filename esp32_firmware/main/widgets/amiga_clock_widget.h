@@ -19,9 +19,13 @@
  
 #pragma once
 
-#include "lvgl.h"
+#include "canvas.h"
+
+#include "board_pins.h" // LCD_H_RES and LCD_V_RES
 
 #include "widgets/widget.h"
+
+using canvas::Canvas;
 
 namespace widgets {
 
@@ -31,6 +35,7 @@ class AmigaClockWidget : public Widget {
 public:
     static const std::string PROPERTY_SHOW_DATE;
     static const std::string PROPERTY_SHOW_SECONDS;
+    static const std::string PROPERTY_LORES;
     
     AmigaClockWidget();
     virtual ~AmigaClockWidget();
@@ -45,17 +50,23 @@ public:
 
 private:
     void pick_clock_dimensions();
-    void draw_tick(double angle_deg);
-    void draw_big_tick(double angle_deg);
-    void draw_minute_hand(double angle_deg);
-    void draw_hour_hand(double angle_deg);
-    void draw_second_hand(double angle_deg);
+    void draw_tick(Canvas *canvas, double angle_deg);
+    void draw_big_tick(Canvas *canvas, double angle_deg);
+    void draw_minute_hand(Canvas *canvas, double angle_deg);
+    void draw_hour_hand(Canvas *canvas, double angle_deg);
+    void draw_second_hand(Canvas *canvas, double angle_deg);
     void draw_date_line(int day, int month, int year);
 
     ClockDimensions *clock_dims;
+    lv_point_t clock_center;
 
     bool show_date;
-    bool show_seconds;    
+    bool show_seconds;   
+    bool lores; 
+
+    Canvas *screen_canvas;
+    Canvas *offscreen_canvas;
+    lv_obj_t *offscreen;
 };
 
 } // namespace widgets
