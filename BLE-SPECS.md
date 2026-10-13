@@ -223,6 +223,34 @@ The backlight is dimmed using PWM, so any value in between is a valid brightness
 level. Read returns the currently configured percentage. Write requests must
 contain exactly one byte; values above `100` are rejected.
 
+### 2.5 Display resolution characteristic
+
+Characteristic UUID:
+- `0xFFF5`
+
+Properties:
+- Read
+- Write
+
+Purpose:
+- configure the display resolution mode
+
+Payload format:
+
+```text
+[resolution]
+```
+
+`resolution` is one byte with the following values:
+
+| Value | Meaning |
+| --- | --- |
+| 0 | high resolution (hires) |
+| 1 | low resolution (lores) |
+
+Read returns the current resolution setting. Write requests must
+contain exactly one byte; values other than `0` or `1` are rejected.
+
 ---
 
 ## 3) Why this is the best fit
@@ -263,6 +291,10 @@ This is the best BLE design for your requirements because:
 ### Configure backlight
 - read or write service `0xFFF0`, characteristic `0xFFF4`
 - send `[percent]` (0-100)
+
+### Configure display resolution
+- read or write service `0xFFF0`, characteristic `0xFFF5`
+- send `[resolution]` (0 = hires, 1 = lores)
 
 ---
 
