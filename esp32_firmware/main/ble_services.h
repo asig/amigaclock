@@ -32,6 +32,8 @@ void ble_services_start(void);
 // These functions need C++, so they will be in a separate file.
 void ble_services_apply_display_config(bool show_date, bool show_seconds);
 void ble_services_get_display_config(bool *show_date, bool *show_seconds);
+void ble_services_apply_resolution(uint8_t resolution);
+void ble_services_get_resolution(uint8_t *resolution);
 
 #ifdef __cplusplus
 }

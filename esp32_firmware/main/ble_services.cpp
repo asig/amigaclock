@@ -57,3 +57,26 @@ void ble_services_get_display_config(bool *show_date, bool *show_seconds) {
     val = w->get_property(widgets::AmigaClockWidget::PROPERTY_SHOW_SECONDS);
     *show_seconds = (val == "true");
 }
+
+void ble_services_apply_resolution(uint8_t resolution) {
+    widgets::Widget *w = widgets::get_widget();
+    if (!w) {
+        ESP_LOGW(TAG, "No widget available to apply resolution.");
+        return;
+    }
+    // resolution: 0 = hires, 1 = lores
+    bool lores = (resolution == 1);
+    w->set_property(widgets::AmigaClockWidget::PROPERTY_LORES, lores ? "true" : "false");
+    ESP_LOGI(TAG, "Applied resolution: %s", lores ? "lores" : "hires");
+}
+
+void ble_services_get_resolution(uint8_t *resolution) {
+    widgets::Widget *w = widgets::get_widget();
+    if (!w) {
+        ESP_LOGW(TAG, "No widget available to get resolution; defaulting to 0 (hires)");
+        *resolution = 0;
+        return;
+    }
+    std::string val = w->get_property(widgets::AmigaClockWidget::PROPERTY_LORES);
+    *resolution = (val == "true") ? 1 : 0;
+}

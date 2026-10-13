@@ -45,6 +45,7 @@ static const char *TAG = "ble_services";
 #define WIFI_STATUS_CHAR_UUID 0xFFF2
 #define DISPLAY_CONFIG_CHAR_UUID 0xFFF3
 #define BACKLIGHT_CHAR_UUID 0xFFF4
+#define RESOLUTION_CHAR_UUID 0xFFF5
 
 static uint8_t s_own_addr_type;
 
@@ -244,6 +245,32 @@ static int gatt_chr_access_backlight(uint16_t conn_handle, uint16_t attr_handle,
     return BLE_ATT_ERR_UNLIKELY;
 }
 
+static int gatt_chr_access_resolution(uint16_t conn_handle, uint16_t attr_handle,
+                                      struct ble_gatt_access_ctxt *ctxt, void *arg)
+{
+    if (ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
+        uint8_t buf[1] = {0};
+        uint16_t len = OS_MBUF_PKTLEN(ctxt->om);
+        if (len != sizeof(buf) || os_mbuf_copydata(ctxt->om, 0, len, buf) != 0 ||
+            buf[0] > 1) {
+            return BLE_ATT_ERR_UNLIKELY;
+        }
+
+        ble_services_apply_resolution(buf[0]);
+        return 0;
+    }
+
+    if (ctxt->op == BLE_GATT_ACCESS_OP_READ_CHR) {
+        uint8_t resolution = 0;
+        ble_services_get_resolution(&resolution);
+        uint8_t buf[1] = {resolution};
+        os_mbuf_append(ctxt->om, buf, sizeof(buf));
+        return 0;
+    }
+
+    return BLE_ATT_ERR_UNLIKELY;
+}
+
 static const struct ble_gatt_svc_def gatt_svr_svcs[] = {
     {
         .type = BLE_GATT_SVC_TYPE_PRIMARY,
@@ -279,6 +306,11 @@ static const struct ble_gatt_svc_def gatt_svr_svcs[] = {
             {
                 .uuid = BLE_UUID16_DECLARE(BACKLIGHT_CHAR_UUID),
                 .access_cb = gatt_chr_access_backlight,
+                .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE,
+            },
+            {
+                .uuid = BLE_UUID16_DECLARE(RESOLUTION_CHAR_UUID),
+                .access_cb = gatt_chr_access_resolution,
                 .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE,
             },
             { 0 },
