@@ -24,8 +24,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenu
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -42,10 +42,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import kotlin.OptIn
 
 class MainActivity : ComponentActivity() {
     private lateinit var bleManager: BleManager
@@ -83,6 +85,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @SuppressLint("MissingPermission")
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AmigaClockScreen(ble: BleManager) {
     val isConnected by ble.isConnected.collectAsState()
@@ -302,7 +305,7 @@ fun AmigaClockScreen(ble: BleManager) {
                                         .menuAnchor()
                                         .fillMaxWidth()
                                 )
-                                ExposedDropdownMenu(
+                                DropdownMenu(
                                     expanded = resolutionExpanded,
                                     onDismissRequest = { resolutionExpanded = false }
                                 ) {
