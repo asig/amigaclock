@@ -54,6 +54,7 @@ QjsWidget::~QjsWidget() {
 }
 
 bool QjsWidget::tick() {    
+    
     struct tm t1, t2;
     localtime_r(&last_tick_time, &t1);
     last_tick_time = time(NULL);
