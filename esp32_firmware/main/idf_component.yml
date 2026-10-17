@@ -20,6 +20,3 @@ dependencies:
 
   # Capacitive touch controller GT911 (I2C)
   espressif/esp_lcd_touch_gt911: "^1.1.0"
-
-  # LVGL graphics library
-  lvgl/lvgl: "^8.3.11"
