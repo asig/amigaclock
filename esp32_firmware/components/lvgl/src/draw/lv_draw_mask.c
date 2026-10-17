@@ -63,6 +63,7 @@ static inline lv_opa_t /* LV_ATTRIBUTE_FAST_MEM */ mask_mix(lv_opa_t mask_act, l
 /**********************
  *  STATIC VARIABLES
  **********************/
+static bool antialiasing_enabled = true;
 
 /**********************
  *      MACROS
@@ -97,6 +98,16 @@ int16_t lv_draw_mask_add(void * param, void * custom_id)
     return i;
 }
 
+void lv_draw_mask_set_antialiasing(bool enabled)
+{
+    antialiasing_enabled = enabled;
+}
+
+bool lv_draw_mask_get_antialiasing(void)
+{
+    return antialiasing_enabled;
+}
+
 /**
  * Apply the added buffers on a line. Used internally by the library's drawing routines.
  * @param mask_buf store the result mask here. Has to be `len` byte long. Should be initialized with `0xFF`.
@@ -124,6 +135,12 @@ lv_draw_mask_res_t LV_ATTRIBUTE_FAST_MEM lv_draw_mask_apply(lv_opa_t * mask_buf,
         else if(res == LV_DRAW_MASK_RES_CHANGED) changed = true;
 
         m++;
+    }
+
+    if(changed && !antialiasing_enabled) {
+        for(lv_coord_t i = 0; i < len; i++) {
+            mask_buf[i] = mask_buf[i] >= 128 ? LV_OPA_COVER : LV_OPA_TRANSP;
+        }
     }
 
     return changed ? LV_DRAW_MASK_RES_CHANGED : LV_DRAW_MASK_RES_FULL_COVER;

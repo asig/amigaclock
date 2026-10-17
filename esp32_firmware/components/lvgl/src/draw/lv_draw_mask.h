@@ -215,6 +215,18 @@ typedef struct {
  **********************/
 
 /**
+ * Enable or disable anti-aliasing for draw masks.
+ * @param enabled true to preserve partial opacity values; false to threshold masks to binary opacity
+ */
+void lv_draw_mask_set_antialiasing(bool enabled);
+
+/**
+ * Get the anti-aliasing setting for draw masks.
+ * @return true if anti-aliasing is enabled
+ */
+bool lv_draw_mask_get_antialiasing(void);
+
+/**
  * Add a draw mask. Everything drawn after it (until removing the mask) will be affected by the mask.
  * @param param an initialized mask parameter. Only the pointer is saved.
  * @param custom_id a custom pointer to identify the mask. Used in `lv_draw_mask_remove_custom`.
