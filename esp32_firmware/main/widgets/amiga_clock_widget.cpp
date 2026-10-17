@@ -34,11 +34,12 @@ namespace widgets {
 
 namespace {
 
-static const char *TAG = "amiga_clock_widget";
+constexpr const char *const TAG = "amiga_clock_widget";
 
-static constexpr int LORES_SCALE_FACTOR = 4;
+constexpr int LORES_SCALE_FACTOR = 2; 
 
-}
+// Height of a text line on the screen (Amiga font height is 8)
+constexpr int TEXT_HEIGHT = 16;
 
 // Amiga WB 1.2 Colors
 const static lv_color_t AMIGA_BLUE   = lv_color_hex(0x0055aa);
@@ -46,8 +47,7 @@ const static lv_color_t AMIGA_BLACK  = lv_color_hex(0x000000);
 const static lv_color_t AMIGA_WHITE  = lv_color_hex(0xffffff);
 const static lv_color_t AMIGA_ORANGE = lv_color_hex(0xff8800);
 
-// Height of a text line on the screen (Amiga font height is 8)
-constexpr int TEXT_HEIGHT = 16;
+}
 
 // Clock dimensions. 
 // Raw values, "reverse-engineered" from Amiberry screenshots :-)
@@ -84,12 +84,15 @@ struct ClockDimensions {
     lv_coord_t tick_small_h;
     lv_coord_t tick_big_h;
     lv_coord_t tick_big_w;
+
+    int tick_line_width;
+    int second_hand_width;
 };
 
 static struct ClockDimensions clock_dims_without_date;
 static struct ClockDimensions clock_dims_with_date;
 static struct ClockDimensions clock_dims_lores;
-static struct ClockDimensions clock_dims_lowres_with_date;
+static struct ClockDimensions clock_dims_lores_with_date;
 
 static const char * const month_names[12] = {
     "Jan",
@@ -107,7 +110,7 @@ static const char * const month_names[12] = {
 };
 
 // Initialize clock dimensions based on the actual clock size.
-static void init_clock_dimensions(struct ClockDimensions *dim, lv_coord_t clock_width) {
+static void init_clock_dimensions(struct ClockDimensions *dim, lv_coord_t clock_width, int tick_line_width, int second_hand_width) {
     dim->radius = clock_width / 2;
     dim->border_w = CLOCK_RAW_BORDER_W * dim->radius / CLOCK_RAW_RADIUS;
     dim->border_space = CLOCK_RAW_BORDER_SPACE * dim->radius / CLOCK_RAW_RADIUS;
@@ -120,6 +123,8 @@ static void init_clock_dimensions(struct ClockDimensions *dim, lv_coord_t clock_
     dim->tick_small_h = CLOCK_RAW_TICK_SMALL_H * dim->radius / CLOCK_RAW_RADIUS;
     dim->tick_big_h = CLOCK_RAW_TICK_BIG_H * dim->radius / CLOCK_RAW_RADIUS;
     dim->tick_big_w = CLOCK_RAW_TICK_BIG_W * dim->radius / CLOCK_RAW_RADIUS;
+    dim->tick_line_width = tick_line_width;
+    dim->second_hand_width = second_hand_width;
 }
 
 // Rotates clockwise by the given angle in radians.
@@ -146,10 +151,10 @@ const std::string widgets::AmigaClockWidget::PROPERTY_LORES = "lores";
 AmigaClockWidget::AmigaClockWidget() {
     static bool initialized = false;
     if (!initialized) {
-        init_clock_dimensions(&clock_dims_without_date, LCD_H_RES-CANVAS_BORDER);
-        init_clock_dimensions(&clock_dims_with_date, LCD_H_RES-CANVAS_BORDER-CLOCK_DATE_LINE_H);
-        init_clock_dimensions(&clock_dims_lores, (LCD_H_RES-CANVAS_BORDER*2)/LORES_SCALE_FACTOR); // 4 pixel low-resolution clock
-        init_clock_dimensions(&clock_dims_lowres_with_date, (LCD_H_RES-CANVAS_BORDER-CLOCK_DATE_LINE_H)/LORES_SCALE_FACTOR);
+        init_clock_dimensions(&clock_dims_without_date, LCD_H_RES-CANVAS_BORDER, 2, 2);
+        init_clock_dimensions(&clock_dims_with_date, LCD_H_RES-CANVAS_BORDER-CLOCK_DATE_LINE_H, 2, 2);
+        init_clock_dimensions(&clock_dims_lores, (LCD_H_RES-CANVAS_BORDER*2)/LORES_SCALE_FACTOR, 1, 1); // 4 pixel low-resolution clock
+        init_clock_dimensions(&clock_dims_lores_with_date, (LCD_H_RES-CANVAS_BORDER-CLOCK_DATE_LINE_H)/LORES_SCALE_FACTOR, 1, 1);
         initialized = true;
     }
 
@@ -246,6 +251,7 @@ void AmigaClockWidget::render() {
 }
 
 void AmigaClockWidget::set_property(const std::string &name, const std::string &value) {
+    ESP_LOGI(TAG, "Setting property %s to %s", name.c_str(), value.c_str());
     if (name == PROPERTY_SHOW_DATE) {
         show_date = (value == "true");
     } else if (name == PROPERTY_SHOW_SECONDS) {
@@ -257,14 +263,16 @@ void AmigaClockWidget::set_property(const std::string &name, const std::string &
 }
 
 std::string AmigaClockWidget::get_property(const std::string &name) const {
+    std::string res;
     if (name == PROPERTY_SHOW_DATE) {
-        return show_date ? "true" : "false";
+        res = show_date ? "true" : "false";
     } else if (name == PROPERTY_SHOW_SECONDS) {
-        return show_seconds ? "true" : "false";
+        res = show_seconds ? "true" : "false";
     } else if (name == PROPERTY_LORES) {
-        return lores ? "true" : "false";
+        res = lores ? "true" : "false";
     }
-    return "";
+    ESP_LOGI(TAG, "Getting property %s: %s", name.c_str(), res.c_str());
+    return res.c_str();
 }
 
 std::vector<std::string> AmigaClockWidget::get_property_names() const {
@@ -273,7 +281,7 @@ std::vector<std::string> AmigaClockWidget::get_property_names() const {
 
 void AmigaClockWidget::pick_clock_dimensions() {
     if (lores) {
-        clock_dims = show_date ? &clock_dims_lowres_with_date : &clock_dims_lores;
+        clock_dims = show_date ? &clock_dims_lores_with_date : &clock_dims_lores;
     } else {
         clock_dims = show_date ? &clock_dims_with_date : &clock_dims_without_date;
     }
@@ -290,7 +298,7 @@ void AmigaClockWidget::draw_tick(Canvas *c, double angle_deg) {
     lv_point_t line_points[2];
     line_points[0] = mv(rotate_point((lv_point_t){0,top}, rad), clock_center);
     line_points[1] = mv(rotate_point((lv_point_t){0,(lv_coord_t)(top+clock_dims->tick_small_h)}, rad), clock_center);
-    c->draw_line(line_points, 2, AMIGA_BLACK, 2);
+    c->draw_line(line_points, 2, AMIGA_BLACK, clock_dims->tick_line_width);
 }
 
 void AmigaClockWidget::draw_big_tick(Canvas *c, double angle_deg) {
@@ -352,7 +360,7 @@ void AmigaClockWidget::draw_second_hand(Canvas *c, double angle_deg) {
     lv_point_t line_points[2];
     line_points[0] = mv(rotate_point((lv_point_t){0,top}, rad), clock_center);
     line_points[1] = mv(rotate_point((lv_point_t){0,0}, rad), clock_center);
-    c->draw_line(line_points, 2, AMIGA_ORANGE, 2);
+    c->draw_line(line_points, 2, AMIGA_ORANGE, clock_dims->second_hand_width);
 }
 
 void AmigaClockWidget::draw_date_line(int day, int month, int year) {

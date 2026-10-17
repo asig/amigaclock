@@ -40,7 +40,7 @@ public:
 
     void draw_filled_poly(const lv_point_t *points, uint16_t point_count, lv_color_t color);
     void draw_line(lv_point_t *points, int count, lv_color_t color, lv_coord_t width);
-
+    
     int width() const { return w; }
     int height() const { return h; }
     lv_obj_t *canvas() const { return canvas_obj; }
@@ -51,6 +51,7 @@ private:
 
     lv_obj_t *canvas_obj;
     lv_color_t *canvas_buf;
+    bool antialiased;
 };
 
 } // namespace canvas

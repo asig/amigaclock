@@ -38,6 +38,7 @@ namespace canvas {
 static const char *TAG = "canvas";
 
 Canvas::Canvas(int w, int h, lv_obj_t *screen) {
+    this->antialiased = false;
     this->w = w;
     this->h = h;
     ESP_LOGI(TAG, "Allocating canvas buffer.");
@@ -70,6 +71,9 @@ void Canvas::invalidate() {
 
 void Canvas::fill_circle(int x, int y, int w, int h, lv_color_t color, lv_color_t border_col, int border_width) {
 
+    auto was_antialiased = lv_draw_mask_get_antialiasing();
+    lv_draw_mask_set_antialiasing(this->antialiased);
+
     // draw background
     lv_draw_rect_dsc_t dsc;
     lv_draw_rect_dsc_init(&dsc);
@@ -91,6 +95,8 @@ void Canvas::fill_circle(int x, int y, int w, int h, lv_color_t color, lv_color_
     circle_dsc.radius = LV_RADIUS_CIRCLE;
 
     lv_canvas_draw_rect(this->canvas_obj, x, y, w, h, &circle_dsc);
+    
+    lv_draw_mask_set_antialiasing(was_antialiased);
 }
 
 void Canvas::draw_char(uint8_t ch, int x, int y, lv_color_t fg, lv_color_t bg) {
@@ -118,6 +124,10 @@ void Canvas::draw_string(const char *str, int x, int y, lv_color_t fg, lv_color_
 }
 
 void Canvas::draw_filled_poly(const lv_point_t *points, uint16_t point_count, lv_color_t color) {
+
+    auto was_antialiased = lv_draw_mask_get_antialiasing();
+    lv_draw_mask_set_antialiasing(this->antialiased);
+
     lv_draw_rect_dsc_t poly_dsc;
     lv_draw_rect_dsc_init(&poly_dsc);
 
@@ -125,9 +135,14 @@ void Canvas::draw_filled_poly(const lv_point_t *points, uint16_t point_count, lv
     poly_dsc.bg_opa = LV_OPA_COVER;
 
     lv_canvas_draw_polygon(this->canvas_obj, points, point_count, &poly_dsc);
+    
+    lv_draw_mask_set_antialiasing(was_antialiased);
 }
 
 void Canvas::draw_line(lv_point_t *points, int count, lv_color_t color, lv_coord_t width) {
+    auto was_antialiased = lv_draw_mask_get_antialiasing();
+    lv_draw_mask_set_antialiasing(this->antialiased);
+
     lv_draw_line_dsc_t line_dsc;
     lv_draw_line_dsc_init(&line_dsc);
     line_dsc.color = color;
@@ -136,6 +151,8 @@ void Canvas::draw_line(lv_point_t *points, int count, lv_color_t color, lv_coord
     line_dsc.round_end = false;
 
     lv_canvas_draw_line(this->canvas_obj, points, count, &line_dsc);
+    
+    lv_draw_mask_set_antialiasing(was_antialiased);
 }
 
 } // namespace canvas
