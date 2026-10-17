@@ -21,6 +21,7 @@ class BleManager(private val context: Context) {
         (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
 
     private var gatt: BluetoothGatt? = null
+    private val readQueue = ArrayDeque<Pair<UUID, UUID>>()
 
     val isConnected = MutableStateFlow(false)
     val isScanning = MutableStateFlow(false)
@@ -52,6 +53,7 @@ class BleManager(private val context: Context) {
                 displayConfig.value = null
                 backlightPercent.value = null
                 resolution.value = null
+                readQueue.clear()
                 logMessage.value = "Verbindung getrennt"
             }
         }
@@ -59,8 +61,11 @@ class BleManager(private val context: Context) {
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 logMessage.value = "Services gefunden. Lese Status..."
-                // Sequentielles Lesen starten
-                readWifiStatus()
+                readQueue.clear()
+                enqueueRead(AmigaClockProtocol.WIFI_SERVICE_UUID, AmigaClockProtocol.WIFI_STATUS_CHAR_UUID)
+                enqueueRead(AmigaClockProtocol.DISPLAY_SERVICE_UUID, AmigaClockProtocol.DISPLAY_CHAR_UUID)
+                enqueueRead(AmigaClockProtocol.DISPLAY_SERVICE_UUID, AmigaClockProtocol.BACKLIGHT_CHAR_UUID)
+                enqueueRead(AmigaClockProtocol.DISPLAY_SERVICE_UUID, AmigaClockProtocol.RESOLUTION_CHAR_UUID)
             }
         }
 
@@ -72,6 +77,7 @@ class BleManager(private val context: Context) {
         ) {
             val data = if (status == BluetoothGatt.GATT_SUCCESS) value else null
             handleCharacteristicData(characteristic.uuid, data)
+            advanceReadQueue(characteristic.uuid)
         }
 
         @Deprecated("Deprecated for SDK >= 33")
@@ -82,6 +88,7 @@ class BleManager(private val context: Context) {
         ) {
             val data = if (status == BluetoothGatt.GATT_SUCCESS) characteristic.value else null
             handleCharacteristicData(characteristic.uuid, data)
+            advanceReadQueue(characteristic.uuid)
         }
 
         override fun onCharacteristicWrite(
@@ -97,22 +104,24 @@ class BleManager(private val context: Context) {
         }
     }
 
+    private fun advanceReadQueue(uuid: UUID) {
+        val currentRead = readQueue.firstOrNull()
+        if (currentRead != null && currentRead.second == uuid) {
+            readQueue.removeFirst()
+        }
+        readNextCharacteristic()
+    }
+
     private fun handleCharacteristicData(uuid: UUID, data: ByteArray?) {
         when (uuid) {
             AmigaClockProtocol.WIFI_STATUS_CHAR_UUID -> {
                 if (data != null) wifiStatus.value = AmigaClockProtocol.parseWifiStatus(data)
-                // Kette fortsetzen: Display-Config lesen
-                readDisplayConfig()
             }
             AmigaClockProtocol.DISPLAY_CHAR_UUID -> {
                 if (data != null) displayConfig.value = AmigaClockProtocol.parseDisplayConfig(data)
-                // Kette fortsetzen: Backlight lesen
-                readBacklight()
             }
             AmigaClockProtocol.BACKLIGHT_CHAR_UUID -> {
                 if (data != null) backlightPercent.value = AmigaClockProtocol.parseBacklight(data)
-                // Kette fortsetzen: Resolution lesen
-                readResolution()
             }
             AmigaClockProtocol.RESOLUTION_CHAR_UUID -> {
                 if (data != null) resolution.value = AmigaClockProtocol.parseResolution(data)
@@ -160,7 +169,7 @@ class BleManager(private val context: Context) {
     }
 
     fun readWifiStatus() {
-        readCharacteristic(
+        enqueueRead(
             AmigaClockProtocol.WIFI_SERVICE_UUID,
             AmigaClockProtocol.WIFI_STATUS_CHAR_UUID
         )
@@ -179,7 +188,7 @@ class BleManager(private val context: Context) {
     }
 
     fun readDisplayConfig() {
-        readCharacteristic(
+        enqueueRead(
             AmigaClockProtocol.DISPLAY_SERVICE_UUID,
             AmigaClockProtocol.DISPLAY_CHAR_UUID
         )
@@ -199,7 +208,7 @@ class BleManager(private val context: Context) {
     }
 
     fun readBacklight() {
-        readCharacteristic(
+        enqueueRead(
             AmigaClockProtocol.DISPLAY_SERVICE_UUID,
             AmigaClockProtocol.BACKLIGHT_CHAR_UUID
         )
@@ -218,10 +227,36 @@ class BleManager(private val context: Context) {
     }
 
     fun readResolution() {
-        readCharacteristic(
+        enqueueRead(
             AmigaClockProtocol.DISPLAY_SERVICE_UUID,
             AmigaClockProtocol.RESOLUTION_CHAR_UUID
         )
+    }
+
+    private fun enqueueRead(serviceUuid: UUID, charUuid: UUID) {
+        val wasEmpty = readQueue.isEmpty()
+        readQueue.add(Pair(serviceUuid, charUuid))
+        if (wasEmpty) {
+            readNextCharacteristic()
+        }
+    }
+
+    private fun readNextCharacteristic() {
+
+        if (readQueue.isEmpty()) return
+        val (serviceUuid, charUuid) = readQueue.first()
+        val service = gatt?.getService(serviceUuid)
+        if (service != null) {
+            val char = service.getCharacteristic(charUuid)
+            if (char != null) {
+                if (gatt?.readCharacteristic(char) == true) {
+                    return // Wait for onCharacteristicRead callback
+                }
+            }
+        }
+        // Could not start read (missing service/characteristic or read failed), skip to next
+        readQueue.removeFirst()
+        readNextCharacteristic()
     }
 
     private fun writeCharacteristic(serviceUuid: UUID, charUuid: UUID, data: ByteArray) {
@@ -238,9 +273,5 @@ class BleManager(private val context: Context) {
         }
     }
 
-    private fun readCharacteristic(serviceUuid: UUID, charUuid: UUID) {
-        val service = gatt?.getService(serviceUuid) ?: return
-        val char = service.getCharacteristic(charUuid) ?: return
-        gatt?.readCharacteristic(char)
-    }
+
 }
