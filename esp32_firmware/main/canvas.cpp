@@ -74,7 +74,6 @@ void Canvas::fill_circle(int x, int y, int w, int h, lv_color_t color, lv_color_
     auto was_antialiased = lv_draw_mask_get_antialiasing();
     lv_draw_mask_set_antialiasing(this->antialiased);
 
-    // draw background
     lv_draw_rect_dsc_t dsc;
     lv_draw_rect_dsc_init(&dsc);
     dsc.radius = LV_RADIUS_CIRCLE;
@@ -84,17 +83,6 @@ void Canvas::fill_circle(int x, int y, int w, int h, lv_color_t color, lv_color_
     dsc.border_width = border_width;
     dsc.border_opa = LV_OPA_COVER;
     lv_canvas_draw_rect(this->canvas_obj, x, y, w, w, &dsc);
-
-    // draw circle
-    lv_draw_rect_dsc_t circle_dsc;
-    lv_draw_rect_dsc_init(&circle_dsc);
-    circle_dsc.bg_color = color;
-    circle_dsc.bg_opa = LV_OPA_COVER;
-    circle_dsc.border_color = border_col;
-    circle_dsc.border_width = border_width;
-    circle_dsc.radius = LV_RADIUS_CIRCLE;
-
-    lv_canvas_draw_rect(this->canvas_obj, x, y, w, h, &circle_dsc);
     
     lv_draw_mask_set_antialiasing(was_antialiased);
 }
@@ -142,7 +130,7 @@ void Canvas::draw_filled_poly(const lv_point_t *points, uint16_t point_count, lv
 void Canvas::draw_line(lv_point_t *points, int count, lv_color_t color, lv_coord_t width) {
     auto was_antialiased = lv_draw_mask_get_antialiasing();
     lv_draw_mask_set_antialiasing(this->antialiased);
-
+    
     lv_draw_line_dsc_t line_dsc;
     lv_draw_line_dsc_init(&line_dsc);
     line_dsc.color = color;
@@ -151,8 +139,6 @@ void Canvas::draw_line(lv_point_t *points, int count, lv_color_t color, lv_coord
     line_dsc.round_end = false;
 
     lv_canvas_draw_line(this->canvas_obj, points, count, &line_dsc);
-    
-    lv_draw_mask_set_antialiasing(was_antialiased);
 }
 
 } // namespace canvas
