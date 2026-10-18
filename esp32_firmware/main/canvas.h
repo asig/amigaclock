@@ -33,13 +33,8 @@ public:
     void clear(lv_color_t color);
     void invalidate();
 
-    void fill_circle(int center_x, int center_y, int radius, lv_color_t color);
-
     void draw_char(uint8_t ch, int x, int y, lv_color_t fg, lv_color_t bg);
     void draw_string(const char *str, int x, int y, lv_color_t fg, lv_color_t bg);
-
-    void draw_filled_poly(const lv_point_t *points, uint16_t point_count, lv_color_t color);
-    void draw_line(lv_point_t *points, int count, lv_color_t color, lv_coord_t width);
 
     void set_pixel(int x, int y, lv_color_t color) {
         if (x >= 0 && x < w && y >= 0 && y < h) {
@@ -61,7 +56,6 @@ private:
 
     lv_obj_t *canvas_obj;
     lv_color_t *canvas_buf;
-    bool antialiased;
 };
 
 } // namespace canvas
