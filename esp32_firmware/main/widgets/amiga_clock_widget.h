@@ -59,7 +59,6 @@ public:
 
     bool tick() override;
     void render() override;
-
     void set_property(const std::string &name, const std::string &value) override;
     std::string get_property(const std::string &name) const override;
 
@@ -72,10 +71,11 @@ private:
         LoRes
     };
 
+    void update_clock_dimensions();
     void set_resolution(Resolution resolution);
     void update_rasterizer();
-    void pick_clock_dimensions();
-    Canvas *get_clockface_canvas(int scale_divider);
+
+    void draw_clockface(Canvas *canvas, const struct tm &t);
     void draw_tick(Canvas *canvas, double angle_deg);
     void draw_big_tick(Canvas *canvas, double angle_deg);
     void draw_minute_hand(Canvas *canvas, double angle_deg);
