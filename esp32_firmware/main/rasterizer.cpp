@@ -62,6 +62,11 @@ void SoftwareRasterizer::draw_filled_poly(Canvas *canvas, const lv_point_t *poin
         return;
     }
 
+    for (uint16_t i = 0; i < point_count; i++) {
+        lv_point_t edge[2] = {points[i], points[(i + 1) % point_count]};
+        draw_line(canvas, edge, 2, color, 1);
+    }
+
     int min_y = points[0].y;
     int max_y = points[0].y;
     for (uint16_t i = 1; i < point_count; i++) {
