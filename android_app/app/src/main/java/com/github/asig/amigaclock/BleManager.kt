@@ -30,6 +30,7 @@ class BleManager(private val context: Context) {
     val displayConfig = MutableStateFlow<AmigaClockProtocol.DisplayConfig?>(null)
     val backlightPercent = MutableStateFlow<Int?>(null)
     val resolution = MutableStateFlow<AmigaClockProtocol.DisplayResolution?>(null)
+    val antialias = MutableStateFlow<Boolean?>(null)
     val logMessage = MutableStateFlow("Bereit")
 
     private val scanCallback = object : ScanCallback() {
@@ -53,6 +54,7 @@ class BleManager(private val context: Context) {
                 displayConfig.value = null
                 backlightPercent.value = null
                 resolution.value = null
+                antialias.value = null
                 readQueue.clear()
                 logMessage.value = "Verbindung getrennt"
             }
@@ -66,6 +68,7 @@ class BleManager(private val context: Context) {
                 enqueueRead(AmigaClockProtocol.DISPLAY_SERVICE_UUID, AmigaClockProtocol.DISPLAY_CHAR_UUID)
                 enqueueRead(AmigaClockProtocol.DISPLAY_SERVICE_UUID, AmigaClockProtocol.BACKLIGHT_CHAR_UUID)
                 enqueueRead(AmigaClockProtocol.DISPLAY_SERVICE_UUID, AmigaClockProtocol.RESOLUTION_CHAR_UUID)
+                enqueueRead(AmigaClockProtocol.DISPLAY_SERVICE_UUID, AmigaClockProtocol.ANTIALIAS_CHAR_UUID)
             }
         }
 
@@ -125,6 +128,10 @@ class BleManager(private val context: Context) {
             }
             AmigaClockProtocol.RESOLUTION_CHAR_UUID -> {
                 if (data != null) resolution.value = AmigaClockProtocol.parseResolution(data)
+                logMessage.value = "Status aktualisiert"
+            }
+            AmigaClockProtocol.ANTIALIAS_CHAR_UUID -> {
+                if (data != null) antialias.value = AmigaClockProtocol.parseAntialias(data)
                 logMessage.value = "Status aktualisiert"
             }
         }
@@ -230,6 +237,22 @@ class BleManager(private val context: Context) {
         enqueueRead(
             AmigaClockProtocol.DISPLAY_SERVICE_UUID,
             AmigaClockProtocol.RESOLUTION_CHAR_UUID
+        )
+    }
+
+    fun sendAntialias(enabled: Boolean) {
+        antialias.value = enabled
+        writeCharacteristic(
+            AmigaClockProtocol.DISPLAY_SERVICE_UUID,
+            AmigaClockProtocol.ANTIALIAS_CHAR_UUID,
+            AmigaClockProtocol.buildAntialiasPayload(enabled)
+        )
+    }
+
+    fun readAntialias() {
+        enqueueRead(
+            AmigaClockProtocol.DISPLAY_SERVICE_UUID,
+            AmigaClockProtocol.ANTIALIAS_CHAR_UUID
         )
     }
 

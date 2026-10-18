@@ -32,6 +32,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -95,6 +96,7 @@ fun AmigaClockScreen(ble: BleManager) {
     val displayConfig by ble.displayConfig.collectAsState()
     val backlightPercent by ble.backlightPercent.collectAsState()
     val resolution by ble.resolution.collectAsState()
+    val antialias by ble.antialias.collectAsState()
     val logMessage by ble.logMessage.collectAsState()
 
     var ssid by remember { mutableStateOf("") }
@@ -332,6 +334,25 @@ fun AmigaClockScreen(ble: BleManager) {
                                     )
                                 }
                             }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text("6. Antialias (0xFFF6)", style = MaterialTheme.typography.titleMedium)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Switch(
+                                checked = antialias ?: false,
+                                onCheckedChange = { ble.sendAntialias(it) }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(if (antialias == true) "On" else "Off")
+                        }
+                        OutlinedButton(onClick = { ble.readAntialias() }) {
+                            Text("Status abfragen")
                         }
                     }
                 }
