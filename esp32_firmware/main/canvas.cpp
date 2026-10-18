@@ -50,13 +50,13 @@ Canvas::Canvas(int w, int h, lv_obj_t *screen) {
 }
 
 Canvas::~Canvas() {
-    if (this->canvas_buf) {
-        heap_caps_free(this->canvas_buf);
-        this->canvas_buf = nullptr;
-    }
     if (this->canvas_obj) {
         lv_obj_del(this->canvas_obj);
         this->canvas_obj = nullptr;
+    }
+    if (this->canvas_buf) {
+        heap_caps_free(this->canvas_buf);
+        this->canvas_buf = nullptr;
     }
 }
 
