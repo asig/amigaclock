@@ -64,19 +64,32 @@ void ble_services_apply_resolution(uint8_t resolution) {
         ESP_LOGW(TAG, "No widget available to apply resolution.");
         return;
     }
-    // resolution: 0 = hires, 1 = lores
-    bool lores = (resolution == 1);
-    w->set_property(widgets::AmigaClockWidget::PROPERTY_LORES, lores ? "true" : "false");
-    ESP_LOGI(TAG, "Applied resolution: %s", lores ? "lores" : "hires");
+    const char *mode = nullptr;
+    switch (resolution) {
+        case 0: mode = "super-hi-res"; break;
+        case 1: mode = "lo-res"; break;
+        case 2: mode = "hi-res"; break;
+        default:
+            ESP_LOGW(TAG, "Ignoring unsupported resolution: %u", resolution);
+            return;
+    }
+    w->set_property(widgets::AmigaClockWidget::PROPERTY_RESOLUTION, mode);
+    ESP_LOGI(TAG, "Applied resolution: %s", mode);
 }
 
 void ble_services_get_resolution(uint8_t *resolution) {
     widgets::Widget *w = widgets::get_widget();
     if (!w) {
-        ESP_LOGW(TAG, "No widget available to get resolution; defaulting to 0 (hires)");
+        ESP_LOGW(TAG, "No widget available to get resolution; defaulting to 0 (super hi-res)");
         *resolution = 0;
         return;
     }
-    std::string val = w->get_property(widgets::AmigaClockWidget::PROPERTY_LORES);
-    *resolution = (val == "true") ? 1 : 0;
+    std::string val = w->get_property(widgets::AmigaClockWidget::PROPERTY_RESOLUTION);
+    if (val == "lo-res") {
+        *resolution = 1;
+    } else if (val == "hi-res") {
+        *resolution = 2;
+    } else {
+        *resolution = 0;
+    }
 }

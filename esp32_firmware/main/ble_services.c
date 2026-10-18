@@ -252,7 +252,7 @@ static int gatt_chr_access_resolution(uint16_t conn_handle, uint16_t attr_handle
         uint8_t buf[1] = {0};
         uint16_t len = OS_MBUF_PKTLEN(ctxt->om);
         if (len != sizeof(buf) || os_mbuf_copydata(ctxt->om, 0, len, buf) != 0 ||
-            buf[0] > 1) {
+            buf[0] > 2) {
             return BLE_ATT_ERR_UNLIKELY;
         }
 

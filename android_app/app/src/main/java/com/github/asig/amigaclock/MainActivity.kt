@@ -284,9 +284,9 @@ fun AmigaClockScreen(ble: BleManager) {
                             "5. Display Auflösung (0xFFF5)",
                             style = MaterialTheme.typography.titleMedium
                         )
-                        val isLores = resolution ?: false
+                        val selectedResolution = resolution ?: AmigaClockProtocol.DisplayResolution.SUPER_HI_RES
                         Text(
-                            "Aktuelle Auflösung: ${if (isLores) "Lores (Low Resolution)" else "Hires (High Resolution)"}",
+                            "Aktuelle Auflösung: ${selectedResolution.label}",
                             style = MaterialTheme.typography.bodySmall
                         )
                         Spacer(modifier = Modifier.height(8.dp))
@@ -297,7 +297,7 @@ fun AmigaClockScreen(ble: BleManager) {
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 OutlinedTextField(
-                                    value = if (isLores) "Lores" else "Hires",
+                                    value = selectedResolution.label,
                                     onValueChange = {},
                                     readOnly = true,
                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = resolutionExpanded) },
@@ -310,16 +310,23 @@ fun AmigaClockScreen(ble: BleManager) {
                                     onDismissRequest = { resolutionExpanded = false }
                                 ) {
                                     DropdownMenuItem(
-                                        text = { Text("Hires") },
+                                        text = { Text(AmigaClockProtocol.DisplayResolution.SUPER_HI_RES.label) },
                                         onClick = {
-                                            ble.sendResolution(false)
+                                            ble.sendResolution(AmigaClockProtocol.DisplayResolution.SUPER_HI_RES)
                                             resolutionExpanded = false
                                         }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Lores") },
+                                        text = { Text(AmigaClockProtocol.DisplayResolution.HI_RES.label) },
                                         onClick = {
-                                            ble.sendResolution(true)
+                                            ble.sendResolution(AmigaClockProtocol.DisplayResolution.HI_RES)
+                                            resolutionExpanded = false
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(AmigaClockProtocol.DisplayResolution.LO_RES.label) },
+                                        onClick = {
+                                            ble.sendResolution(AmigaClockProtocol.DisplayResolution.LO_RES)
                                             resolutionExpanded = false
                                         }
                                     )

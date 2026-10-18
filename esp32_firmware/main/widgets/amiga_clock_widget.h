@@ -30,13 +30,28 @@ using canvas::Canvas;
 
 namespace widgets {
 
-struct ClockDimensions;
+struct ClockDimensions {
+    lv_coord_t radius;
+    lv_coord_t border_w;
+    lv_coord_t border_space;
+    lv_coord_t hand_min_top;
+    lv_coord_t hand_min_bottom;
+    lv_coord_t hand_min_width;
+    lv_coord_t hand_hour_top;
+    lv_coord_t hand_hour_bottom;
+    lv_coord_t hand_hour_width;
+    lv_coord_t tick_small_h;
+    lv_coord_t tick_big_h;
+    lv_coord_t tick_big_w;
+    int tick_line_width;
+    int second_hand_width;
+};
 
 class AmigaClockWidget : public Widget {
 public:
     static const std::string PROPERTY_SHOW_DATE;
     static const std::string PROPERTY_SHOW_SECONDS;
-    static const std::string PROPERTY_LORES;
+    static const std::string PROPERTY_RESOLUTION;
     static const std::string PROPERTY_ANTIALIAS;
     
     AmigaClockWidget();
@@ -51,8 +66,16 @@ public:
     std::vector<std::string> get_property_names() const override;
 
 private:
+    enum class Resolution {
+        SuperHiRes,
+        HiRes,
+        LoRes
+    };
+
+    void set_resolution(Resolution resolution);
     void update_rasterizer();
     void pick_clock_dimensions();
+    Canvas *get_clockface_canvas(int scale_divider);
     void draw_tick(Canvas *canvas, double angle_deg);
     void draw_big_tick(Canvas *canvas, double angle_deg);
     void draw_minute_hand(Canvas *canvas, double angle_deg);
@@ -60,16 +83,17 @@ private:
     void draw_second_hand(Canvas *canvas, double angle_deg);
     void draw_date_line(int day, int month, int year);
 
-    ClockDimensions *clock_dims;
+    ClockDimensions clock_dims;
     lv_point_t clock_center;
 
     bool show_date;
     bool show_seconds;   
-    bool lores; 
+    Resolution resolution;
+    int scale_divider;
     bool antialias;
 
     Canvas *screen_canvas;
-    Canvas *offscreen_canvas;
+    Canvas *clockface_canvas;
     canvas::Rasterizer *rasterizer;
     lv_obj_t *offscreen;
 };

@@ -245,11 +245,13 @@ Payload format:
 
 | Value | Meaning |
 | --- | --- |
-| 0 | high resolution (hires) |
-| 1 | low resolution (lores) |
+| 0 | Super hi-res (native screen resolution, no scaling) |
+| 1 | Lo-Res (4x scale divider) |
+| 2 | Hi-Res (2x scale divider) |
 
 Read returns the current resolution setting. Write requests must
-contain exactly one byte; values other than `0` or `1` are rejected.
+contain exactly one byte; values other than `0`, `1`, or `2` are rejected.
+Values `0` and `1` preserve their meanings from the original two-mode protocol.
 
 ---
 
@@ -294,7 +296,7 @@ This is the best BLE design for your requirements because:
 
 ### Configure display resolution
 - read or write service `0xFFF0`, characteristic `0xFFF5`
-- send `[resolution]` (0 = hires, 1 = lores)
+- send `[resolution]` (0 = Super hi-res, 1 = Lo-Res, 2 = Hi-Res)
 
 ---
 

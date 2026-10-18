@@ -31,6 +31,16 @@ object AmigaClockProtocol {
 
     data class DisplayConfig(val showDate: Boolean, val showSeconds: Boolean)
 
+    enum class DisplayResolution(val wireValue: Int, val label: String) {
+        SUPER_HI_RES(0, "Super hi-res"),
+        HI_RES(2, "Hi-Res"),
+        LO_RES(1, "Lo-Res");
+
+        companion object {
+            fun fromWireValue(value: Int): DisplayResolution? = entries.firstOrNull { it.wireValue == value }
+        }
+    }
+
     /** Packt die aktuelle Zeit in 10 Bytes (Little-Endian) */
     fun buildTimePayload(time: LocalDateTime = LocalDateTime.now()): ByteArray {
         val buffer = ByteBuffer.allocate(10).order(ByteOrder.LITTLE_ENDIAN)
@@ -73,9 +83,9 @@ object AmigaClockProtocol {
         return byteArrayOf(clamped.toByte())
     }
 
-    /** Packt [resolution] (0=hires, 1=lores) */
-    fun buildResolutionPayload(lores: Boolean): ByteArray {
-        return byteArrayOf(if (lores) 1.toByte() else 0.toByte())
+    /** Packt the display resolution enum value. */
+    fun buildResolutionPayload(resolution: DisplayResolution): ByteArray {
+        return byteArrayOf(resolution.wireValue.toByte())
     }
 
     /** Liest [status][ssid_len][ssid...][ip[4]] */
@@ -105,9 +115,9 @@ object AmigaClockProtocol {
         return data[0].toInt() and 0xFF
     }
 
-    /** Liest [resolution] (0=hires, 1=lores) */
-    fun parseResolution(data: ByteArray): Boolean? {
+    /** Liest the display resolution enum value. */
+    fun parseResolution(data: ByteArray): DisplayResolution? {
         if (data.isEmpty()) return null
-        return data[0].toInt() != 0
+        return DisplayResolution.fromWireValue(data[0].toInt() and 0xFF)
     }
 }
