@@ -26,6 +26,7 @@ idf_component_register(
         "fontdata.cpp"
         "qjs_runtime.cpp"
         "canvas.cpp"
+        "rasterizer.cpp"
         "widgets/widget.cpp"
         "widgets/amiga_clock_widget.cpp"
     INCLUDE_DIRS "."

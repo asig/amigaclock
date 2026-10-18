@@ -38,7 +38,6 @@ namespace canvas {
 static const char *TAG = "canvas";
 
 Canvas::Canvas(int w, int h, lv_obj_t *screen) {
-    this->antialiased = false;
     this->w = w;
     this->h = h;
     ESP_LOGI(TAG, "Allocating canvas buffer.");
@@ -69,24 +68,6 @@ void Canvas::invalidate() {
     lv_obj_invalidate(this->canvas_obj);
 }
 
-void Canvas::fill_circle(int x, int y, int w, int h, lv_color_t color, lv_color_t border_col, int border_width) {
-
-    auto was_antialiased = lv_draw_mask_get_antialiasing();
-    lv_draw_mask_set_antialiasing(this->antialiased);
-
-    lv_draw_rect_dsc_t dsc;
-    lv_draw_rect_dsc_init(&dsc);
-    dsc.radius = LV_RADIUS_CIRCLE;
-    dsc.bg_color = color;
-    dsc.bg_opa = LV_OPA_COVER;
-    dsc.border_color = border_col;
-    dsc.border_width = border_width;
-    dsc.border_opa = LV_OPA_COVER;
-    lv_canvas_draw_rect(this->canvas_obj, x, y, w, w, &dsc);
-    
-    lv_draw_mask_set_antialiasing(was_antialiased);
-}
-
 void Canvas::draw_char(uint8_t ch, int x, int y, lv_color_t fg, lv_color_t bg) {
     lv_color_t *dst_buf = this->canvas_buf;
     const uint8_t *chdata = &font[ch*8];
@@ -109,36 +90,6 @@ void Canvas::draw_string(const char *str, int x, int y, lv_color_t fg, lv_color_
         this->draw_char(*str++, x, y, fg, bg);
         x += 8;
     }
-}
-
-void Canvas::draw_filled_poly(const lv_point_t *points, uint16_t point_count, lv_color_t color) {
-
-    auto was_antialiased = lv_draw_mask_get_antialiasing();
-    lv_draw_mask_set_antialiasing(this->antialiased);
-
-    lv_draw_rect_dsc_t poly_dsc;
-    lv_draw_rect_dsc_init(&poly_dsc);
-
-    poly_dsc.bg_color = color;
-    poly_dsc.bg_opa = LV_OPA_COVER;
-
-    lv_canvas_draw_polygon(this->canvas_obj, points, point_count, &poly_dsc);
-    
-    lv_draw_mask_set_antialiasing(was_antialiased);
-}
-
-void Canvas::draw_line(lv_point_t *points, int count, lv_color_t color, lv_coord_t width) {
-    auto was_antialiased = lv_draw_mask_get_antialiasing();
-    lv_draw_mask_set_antialiasing(this->antialiased);
-    
-    lv_draw_line_dsc_t line_dsc;
-    lv_draw_line_dsc_init(&line_dsc);
-    line_dsc.color = color;
-    line_dsc.width = width;
-    line_dsc.round_start = false;
-    line_dsc.round_end = false;
-
-    lv_canvas_draw_line(this->canvas_obj, points, count, &line_dsc);
 }
 
 } // namespace canvas

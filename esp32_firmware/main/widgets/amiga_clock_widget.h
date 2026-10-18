@@ -20,6 +20,7 @@
 #pragma once
 
 #include "canvas.h"
+#include "rasterizer.h"
 
 #include "board_pins.h" // LCD_H_RES and LCD_V_RES
 
@@ -36,6 +37,7 @@ public:
     static const std::string PROPERTY_SHOW_DATE;
     static const std::string PROPERTY_SHOW_SECONDS;
     static const std::string PROPERTY_LORES;
+    static const std::string PROPERTY_ANTIALIAS;
     
     AmigaClockWidget();
     virtual ~AmigaClockWidget();
@@ -49,6 +51,7 @@ public:
     std::vector<std::string> get_property_names() const override;
 
 private:
+    void update_rasterizer();
     void pick_clock_dimensions();
     void draw_tick(Canvas *canvas, double angle_deg);
     void draw_big_tick(Canvas *canvas, double angle_deg);
@@ -63,9 +66,11 @@ private:
     bool show_date;
     bool show_seconds;   
     bool lores; 
+    bool antialias;
 
     Canvas *screen_canvas;
     Canvas *offscreen_canvas;
+    canvas::Rasterizer *rasterizer;
     lv_obj_t *offscreen;
 };
 
