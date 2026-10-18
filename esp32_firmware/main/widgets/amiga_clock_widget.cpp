@@ -184,7 +184,7 @@ bool AmigaClockWidget::tick() {
     return t1.tm_sec != t2.tm_sec;
 }
 
-void AmigaClockWidget::render() {
+void AmigaClockWidget::render() {    
     // Blue background
     screen_canvas->clear(AMIGA_BLUE);
     if (lores) {
@@ -193,12 +193,14 @@ void AmigaClockWidget::render() {
 
     // Clock face: either to screen directly, or to offscreen canvas    
     int canvas_width = lores ? offscreen_canvas->width() : screen_canvas->width();
-    int x = canvas_width / 2 - clock_dims->radius;
     int y = lores ? 0 : CANVAS_BORDER;
-    int w = clock_dims->radius * 2;
+    int center_x = canvas_width / 2;
+    int center_y = y + clock_dims->radius;
+    int radius = clock_dims->radius;
     Canvas *c = lores ? offscreen_canvas : screen_canvas;
 
-    c->fill_circle(x, y, w, w, AMIGA_WHITE, AMIGA_BLACK, clock_dims->border_w);
+    c->fill_circle(center_x, center_y, radius, AMIGA_BLACK);
+    c->fill_circle(center_x, center_y, radius - clock_dims->border_w, AMIGA_WHITE);
 
     // Draw min markers
     for (int i = 0; i < 60; i++) {
