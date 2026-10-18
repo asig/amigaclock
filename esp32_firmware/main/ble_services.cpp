@@ -93,3 +93,24 @@ void ble_services_get_resolution(uint8_t *resolution) {
         *resolution = 0;
     }
 }
+
+void ble_services_apply_antialias(bool enabled) {
+    widgets::Widget *w = widgets::get_widget();
+    if (!w) {
+        ESP_LOGW(TAG, "No widget available to apply antialias setting.");
+        return;
+    }
+    w->set_property(widgets::AmigaClockWidget::PROPERTY_ANTIALIAS, enabled ? "true" : "false");
+    ESP_LOGI(TAG, "Applied antialias: %s", enabled ? "on" : "off");
+}
+
+void ble_services_get_antialias(bool *enabled) {
+    widgets::Widget *w = widgets::get_widget();
+    if (!w) {
+        ESP_LOGW(TAG, "No widget available to read antialias setting; defaulting to off.");
+        *enabled = false;
+        return;
+    }
+    const std::string value = w->get_property(widgets::AmigaClockWidget::PROPERTY_ANTIALIAS);
+    *enabled = value == "true";
+}

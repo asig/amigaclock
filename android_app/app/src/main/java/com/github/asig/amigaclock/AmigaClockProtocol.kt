@@ -18,6 +18,7 @@ object AmigaClockProtocol {
     val DISPLAY_CHAR_UUID: UUID = UUID.fromString("0000fff3-0000-1000-8000-00805f9b34fb")
     val BACKLIGHT_CHAR_UUID: UUID = UUID.fromString("0000fff4-0000-1000-8000-00805f9b34fb")
     val RESOLUTION_CHAR_UUID: UUID = UUID.fromString("0000fff5-0000-1000-8000-00805f9b34fb")
+    val ANTIALIAS_CHAR_UUID: UUID = UUID.fromString("0000fff6-0000-1000-8000-00805f9b34fb")
 
     data class WifiStatus(val status: Int, val ssid: String, val ip: String) {
         val statusText: String
@@ -30,6 +31,17 @@ object AmigaClockProtocol {
     }
 
     data class DisplayConfig(val showDate: Boolean, val showSeconds: Boolean)
+
+    fun buildAntialiasPayload(enabled: Boolean): ByteArray = byteArrayOf((if (enabled) 1 else 0).toByte())
+
+    fun parseAntialias(data: ByteArray): Boolean? {
+        if (data.size != 1) return null
+        return when (data[0].toInt() and 0xFF) {
+            0 -> false
+            1 -> true
+            else -> null
+        }
+    }
 
     enum class DisplayResolution(val wireValue: Int, val label: String) {
         SUPER_HI_RES(0, "Super hi-res"),

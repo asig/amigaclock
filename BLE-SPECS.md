@@ -253,6 +253,28 @@ Read returns the current resolution setting. Write requests must
 contain exactly one byte; values other than `0`, `1`, or `2` are rejected.
 Values `0` and `1` preserve their meanings from the original two-mode protocol.
 
+### 2.6 Antialias characteristic
+
+Characteristic UUID:
+- `0xFFF6`
+
+Properties:
+- Read
+- Write
+
+Purpose:
+- enable or disable antialiased drawing primitives
+
+Payload format:
+
+```text
+[antialias]
+```
+
+The value is one byte: `0` disables antialiasing and `1` enables it. Read
+returns the current setting. Write requests must contain exactly one byte and
+values other than `0` or `1` are rejected.
+
 ---
 
 ## 3) Why this is the best fit
@@ -297,6 +319,10 @@ This is the best BLE design for your requirements because:
 ### Configure display resolution
 - read or write service `0xFFF0`, characteristic `0xFFF5`
 - send `[resolution]` (0 = Super hi-res, 1 = Lo-Res, 2 = Hi-Res)
+
+### Configure antialias
+- read or write service `0xFFF0`, characteristic `0xFFF6`
+- send `[antialias]` (`0` = off, `1` = on)
 
 ---
 
