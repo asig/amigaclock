@@ -29,7 +29,7 @@ class BleManager(private val context: Context) {
     val wifiStatus = MutableStateFlow<AmigaClockProtocol.WifiStatus?>(null)
     val displayConfig = MutableStateFlow<AmigaClockProtocol.DisplayConfig?>(null)
     val backlightPercent = MutableStateFlow<Int?>(null)
-    val resolution = MutableStateFlow<Boolean?>(null)
+    val resolution = MutableStateFlow<AmigaClockProtocol.DisplayResolution?>(null)
     val logMessage = MutableStateFlow("Bereit")
 
     private val scanCallback = object : ScanCallback() {
@@ -214,11 +214,11 @@ class BleManager(private val context: Context) {
         )
     }
 
-    fun sendResolution(lores: Boolean) {
+    fun sendResolution(resolution: AmigaClockProtocol.DisplayResolution) {
         // Lokalen Zustand sofort nachführen
-        resolution.value = lores
+        this.resolution.value = resolution
 
-        val payload = AmigaClockProtocol.buildResolutionPayload(lores)
+        val payload = AmigaClockProtocol.buildResolutionPayload(resolution)
         writeCharacteristic(
             AmigaClockProtocol.DISPLAY_SERVICE_UUID,
             AmigaClockProtocol.RESOLUTION_CHAR_UUID,

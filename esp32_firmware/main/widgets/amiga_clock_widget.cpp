@@ -36,7 +36,8 @@ namespace {
 
 constexpr const char *const TAG = "amiga_clock_widget";
 
-constexpr int LORES_SCALE_FACTOR = 2; 
+constexpr int HIRES_SCALE_DIVIDER = 2;
+constexpr int LORES_SCALE_DIVIDER = 4;
 
 // Height of a text line on the screen (Amiga font height is 8)
 constexpr int TEXT_HEIGHT = 16;
@@ -72,30 +73,6 @@ canvas::LvglRasterizer lvgl_rasterizer;
 // Clock dimensions scaled to the actual display resolution, including spacing
 #define CANVAS_BORDER 20
 
-
-struct ClockDimensions {
-    // All dimensions are clock only, without borders
-    lv_coord_t radius;
-    lv_coord_t border_w;
-    lv_coord_t border_space;
-    lv_coord_t hand_min_top;
-    lv_coord_t hand_min_bottom;
-    lv_coord_t hand_min_width;
-    lv_coord_t hand_hour_top;
-    lv_coord_t hand_hour_bottom;
-    lv_coord_t hand_hour_width;
-    lv_coord_t tick_small_h;
-    lv_coord_t tick_big_h;
-    lv_coord_t tick_big_w;
-
-    int tick_line_width;
-    int second_hand_width;
-};
-
-static struct ClockDimensions clock_dims_without_date;
-static struct ClockDimensions clock_dims_with_date;
-static struct ClockDimensions clock_dims_lores;
-static struct ClockDimensions clock_dims_lores_with_date;
 
 static const char * const month_names[12] = {
     "Jan",
@@ -149,36 +126,28 @@ static time_t last_tick_time = 0;
 
 const std::string widgets::AmigaClockWidget::PROPERTY_SHOW_DATE = "show_date";
 const std::string widgets::AmigaClockWidget::PROPERTY_SHOW_SECONDS = "show_seconds";
-const std::string widgets::AmigaClockWidget::PROPERTY_LORES = "lores";
+const std::string widgets::AmigaClockWidget::PROPERTY_RESOLUTION = "resolution";
 const std::string widgets::AmigaClockWidget::PROPERTY_ANTIALIAS = "antialias";
 
 AmigaClockWidget::AmigaClockWidget() {
-    static bool initialized = false;
-    if (!initialized) {
-        init_clock_dimensions(&clock_dims_without_date, LCD_H_RES-CANVAS_BORDER, 2, 2);
-        init_clock_dimensions(&clock_dims_with_date, LCD_H_RES-CANVAS_BORDER-CLOCK_DATE_LINE_H, 2, 2);
-        init_clock_dimensions(&clock_dims_lores, (LCD_H_RES-CANVAS_BORDER*2)/LORES_SCALE_FACTOR, 1, 1); // 4 pixel low-resolution clock
-        init_clock_dimensions(&clock_dims_lores_with_date, (LCD_H_RES-CANVAS_BORDER-CLOCK_DATE_LINE_H)/LORES_SCALE_FACTOR, 1, 1);
-        initialized = true;
-    }
-
     show_date = true;
     show_seconds = true;
-    lores = false;
+    set_resolution(Resolution::SuperHiRes);
     antialias = false;
 
     update_rasterizer();
-    pick_clock_dimensions();
+    update_clock_dimensions();
 
     offscreen = lv_obj_create(NULL);
+    clockface_canvas = new Canvas(LCD_H_RES, LCD_V_RES, offscreen);
+
     screen_canvas = new Canvas(LCD_H_RES, LCD_V_RES, lv_scr_act());
-    offscreen_canvas = new Canvas(LCD_H_RES/LORES_SCALE_FACTOR, LCD_V_RES/LORES_SCALE_FACTOR, offscreen);
     lv_obj_center(screen_canvas->canvas());
 }
 
 AmigaClockWidget::~AmigaClockWidget() {
     delete screen_canvas;
-    delete offscreen_canvas;
+    delete clockface_canvas;
     lv_obj_del(offscreen);
 }
 
@@ -191,23 +160,51 @@ bool AmigaClockWidget::tick() {
     return t1.tm_sec != t2.tm_sec;
 }
 
-void AmigaClockWidget::render() {    
-    // Blue background
+void AmigaClockWidget::render() {        
     screen_canvas->clear(AMIGA_BLUE);
-    if (lores) {
-        offscreen_canvas->clear(AMIGA_BLUE);
+
+    struct tm t;
+    localtime_r(&last_tick_time, &t);
+
+
+    this->draw_clockface(clockface_canvas, t);
+
+    // Now upscale clockface
+    const lv_color_t *src = clockface_canvas->buffer();
+    const int src_width = clockface_canvas->width();
+    const int logical_width = src_width / scale_divider;
+    const int logical_height = clockface_canvas->height() / scale_divider;
+
+    lv_color_t *dst = screen_canvas->buffer();
+    const int dst_width = screen_canvas->width();
+    const int dst_offset_x = (LCD_H_RES - logical_width * scale_divider) / 2;
+    for (int y = 0; y < logical_height; y++) {
+        for (int x = 0; x < logical_width; x++) {
+            const lv_color_t color = src[y * src_width + x];
+            for (int i = 0; i < scale_divider; i++) {
+                const int dst_y = y * scale_divider + i;
+                for (int j = 0; j < scale_divider; j++) {
+                    const int dst_x = x * scale_divider + j + dst_offset_x;
+                    dst[dst_y * dst_width  + dst_x] = color;
+                }
+            }
+        }
     }
 
-    // Clock face: either to screen directly, or to offscreen canvas    
-    int canvas_width = lores ? offscreen_canvas->width() : screen_canvas->width();
-    int y = lores ? 0 : CANVAS_BORDER;
-    int center_x = canvas_width / 2;
-    int center_y = y + clock_dims->radius;
-    int radius = clock_dims->radius;
-    Canvas *c = lores ? offscreen_canvas : screen_canvas;
+    // Show date line if enabled
+    if (show_date) {
+        draw_date_line(t.tm_mday, t.tm_mon, t.tm_year + 1900);
+    }
+    
+    screen_canvas->invalidate();
+}
 
-    rasterizer->fill_circle(c, center_x, center_y, radius, AMIGA_BLACK);
-    rasterizer->fill_circle(c, center_x, center_y, radius - clock_dims->border_w, AMIGA_WHITE);
+void AmigaClockWidget::draw_clockface(Canvas *c, const struct tm &t) {    
+    c->clear(AMIGA_BLUE);
+
+    int radius = clock_dims.radius;
+    rasterizer->fill_circle(c, clock_center.x, clock_center.y, radius, AMIGA_BLACK);
+    rasterizer->fill_circle(c, clock_center.x, clock_center.y, radius - clock_dims.border_w, AMIGA_WHITE);
 
     // Draw min markers
     for (int i = 0; i < 60; i++) {
@@ -217,9 +214,6 @@ void AmigaClockWidget::render() {
             draw_tick(c, i*6); // Each minute marker is 6 degrees apart
         }    
     }
-
-    struct tm t;
-    localtime_r(&last_tick_time, &t);
     
     // Draw clock hands
     // Minute hand moves every 10 secs
@@ -229,34 +223,6 @@ void AmigaClockWidget::render() {
     if (show_seconds) {
         draw_second_hand(c, t.tm_sec * 6);
     }
-
-    if (lores) {
-        // copy the offscreen canvas to the screen
-        lv_color_t *src = offscreen_canvas->buffer();
-        lv_color_t *dst = screen_canvas->buffer();
-
-        int dstOfsX = (LCD_H_RES - offscreen_canvas->width()*LORES_SCALE_FACTOR) / 2;
-        int dstOfsY = CANVAS_BORDER;
-
-        int w = offscreen_canvas->width();
-        int h = offscreen_canvas->height();
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                lv_color_t color = src[y * w + x];
-                for (int i = 0; i < LORES_SCALE_FACTOR; i++) {
-                    int dstY = y * LORES_SCALE_FACTOR + i + dstOfsY;
-                    for (int j = 0; j < LORES_SCALE_FACTOR; j++) {
-                        int dstX = x * LORES_SCALE_FACTOR + j + dstOfsX;
-                        dst[dstY * LCD_H_RES + dstX] = color;
-                    }
-                }
-            }
-        }
-    }
-    if (show_date) {
-        draw_date_line(t.tm_mday, t.tm_mon, t.tm_year + 1900);
-    }
-    screen_canvas->invalidate();
 }
 
 void AmigaClockWidget::set_property(const std::string &name, const std::string &value) {
@@ -265,13 +231,19 @@ void AmigaClockWidget::set_property(const std::string &name, const std::string &
         show_date = (value == "true");
     } else if (name == PROPERTY_SHOW_SECONDS) {
         show_seconds = (value == "true");
-    } else if (name == PROPERTY_LORES) {
-        lores = (value == "true");
+    } else if (name == PROPERTY_RESOLUTION) {
+        if (value == "super-hi-res") {
+            set_resolution(Resolution::SuperHiRes);
+        } else if (value == "hi-res") {
+            set_resolution(Resolution::HiRes);
+        } else if (value == "lo-res") {
+            set_resolution(Resolution::LoRes);
+        }
     } else if (name == PROPERTY_ANTIALIAS) {
         antialias = (value == "true");
         update_rasterizer();
     }
-    pick_clock_dimensions();
+    update_clock_dimensions();
 }
 
 std::string AmigaClockWidget::get_property(const std::string &name) const {
@@ -280,8 +252,12 @@ std::string AmigaClockWidget::get_property(const std::string &name) const {
         res = show_date ? "true" : "false";
     } else if (name == PROPERTY_SHOW_SECONDS) {
         res = show_seconds ? "true" : "false";
-    } else if (name == PROPERTY_LORES) {
-        res = lores ? "true" : "false";
+    } else if (name == PROPERTY_RESOLUTION) {
+        switch (resolution) {
+            case Resolution::SuperHiRes: res = "super-hi-res"; break;
+            case Resolution::HiRes: res = "hi-res"; break;
+            case Resolution::LoRes: res = "lo-res"; break;
+        }
     } else if (name == PROPERTY_ANTIALIAS) {
         res = antialias ? "true" : "false";
     }
@@ -290,7 +266,22 @@ std::string AmigaClockWidget::get_property(const std::string &name) const {
 }
 
 std::vector<std::string> AmigaClockWidget::get_property_names() const {
-    return { PROPERTY_SHOW_DATE, PROPERTY_SHOW_SECONDS, PROPERTY_LORES, PROPERTY_ANTIALIAS };
+    return { PROPERTY_SHOW_DATE, PROPERTY_SHOW_SECONDS, PROPERTY_RESOLUTION, PROPERTY_ANTIALIAS };
+}
+
+void AmigaClockWidget::set_resolution(Resolution resolution) {
+    this->resolution = resolution;
+    switch (resolution) {
+        case Resolution::SuperHiRes:
+            scale_divider = 1;
+            break;
+        case Resolution::HiRes:
+            scale_divider = HIRES_SCALE_DIVIDER;
+            break;
+        case Resolution::LoRes:
+            scale_divider = LORES_SCALE_DIVIDER;
+            break;
+    }
 }
 
 void AmigaClockWidget::update_rasterizer() {
@@ -298,38 +289,57 @@ void AmigaClockWidget::update_rasterizer() {
                           : static_cast<canvas::Rasterizer *>(&software_rasterizer);
 }
 
-void AmigaClockWidget::pick_clock_dimensions() {
-    if (lores) {
-        clock_dims = show_date ? &clock_dims_lores_with_date : &clock_dims_lores;
-    } else {
-        clock_dims = show_date ? &clock_dims_with_date : &clock_dims_without_date;
+void AmigaClockWidget::update_clock_dimensions() {
+    int clock_width = LCD_H_RES - CANVAS_BORDER - (show_date ? CLOCK_DATE_LINE_H : 0);
+    int tick_width = 2;
+    int second_hand_width = 2;
+    switch (resolution) {
+        case Resolution::SuperHiRes:
+            clock_width = LCD_H_RES - CANVAS_BORDER - (show_date ? CLOCK_DATE_LINE_H : 0);
+            tick_width = 2;
+            second_hand_width = 2;
+            break;
+        case Resolution::HiRes:
+            clock_width = (LCD_H_RES - (show_date ? CANVAS_BORDER + CLOCK_DATE_LINE_H : CANVAS_BORDER * 2)) /
+                          HIRES_SCALE_DIVIDER;
+            tick_width = 1;
+            second_hand_width = 1;
+            break;
+        case Resolution::LoRes:
+            clock_width = (LCD_H_RES - (show_date ? CANVAS_BORDER + CLOCK_DATE_LINE_H : CANVAS_BORDER * 2)) /
+                          LORES_SCALE_DIVIDER;
+            tick_width = 1;
+            second_hand_width = 1;
+            break;
     }
+    init_clock_dimensions(&clock_dims, clock_width, tick_width, second_hand_width);
+
     clock_center = (lv_point_t){
-        (lv_coord_t)(lores ? LCD_H_RES / (2 * LORES_SCALE_FACTOR) : LCD_H_RES / 2),
-        (lv_coord_t)((lores ? 0 : CANVAS_BORDER) + clock_dims->radius)
+        (lv_coord_t)((LCD_H_RES / scale_divider) / 2),
+        (lv_coord_t)(clock_dims.radius + CANVAS_BORDER / scale_divider)
     };
 }
 
 void AmigaClockWidget::draw_tick(Canvas *c, double angle_deg) {
     double rad = angle_deg * M_PI / 180.0;
 
-    lv_coord_t top = -clock_dims->radius + clock_dims->border_w + clock_dims->border_space;
+    lv_coord_t top = -clock_dims.radius + clock_dims.border_w + clock_dims.border_space;
     lv_point_t line_points[2];
     line_points[0] = mv(rotate_point((lv_point_t){0,top}, rad), clock_center);
-    line_points[1] = mv(rotate_point((lv_point_t){0,(lv_coord_t)(top+clock_dims->tick_small_h)}, rad), clock_center);
-    rasterizer->draw_line(c, line_points, 2, AMIGA_BLACK, clock_dims->tick_line_width);
+    line_points[1] = mv(rotate_point((lv_point_t){0,(lv_coord_t)(top+clock_dims.tick_small_h)}, rad), clock_center);
+    rasterizer->draw_line(c, line_points, 2, AMIGA_BLACK, clock_dims.tick_line_width);
 }
 
 void AmigaClockWidget::draw_big_tick(Canvas *c, double angle_deg) {
     double rad = angle_deg * M_PI / 180.0;
 
     // poly points with offsets to center, so that we can just rotate them
-    lv_coord_t top = -clock_dims->radius + clock_dims->border_w + clock_dims->border_space;
+    lv_coord_t top = -clock_dims.radius + clock_dims.border_w + clock_dims.border_space;
     lv_point_t poly_points[] = {
         {0,                   top},
-        {(lv_coord_t)(clock_dims->tick_big_w/2),  (lv_coord_t)(top + clock_dims->tick_big_h/2)},
-        {0,                   (lv_coord_t)(top + clock_dims->tick_big_h)},
-        {(lv_coord_t)(-clock_dims->tick_big_w/2), (lv_coord_t)(top + clock_dims->tick_big_h/2)}
+        {(lv_coord_t)(clock_dims.tick_big_w/2),  (lv_coord_t)(top + clock_dims.tick_big_h/2)},
+        {0,                   (lv_coord_t)(top + clock_dims.tick_big_h)},
+        {(lv_coord_t)(-clock_dims.tick_big_w/2), (lv_coord_t)(top + clock_dims.tick_big_h/2)}
     };
     for (int i = 0; i < 4; i++) {
         poly_points[i] = mv(rotate_point(poly_points[i], rad), clock_center);
@@ -342,12 +352,12 @@ void AmigaClockWidget::draw_minute_hand(Canvas *c, double angle_deg) {
     double rad = angle_deg * M_PI / 180.0;
 
     // poly points with offsets to center, so that we can just rotate them
-    lv_coord_t top = -clock_dims->hand_min_top - clock_dims->hand_min_bottom;
+    lv_coord_t top = -clock_dims.hand_min_top - clock_dims.hand_min_bottom;
     lv_point_t poly_points[] = {
         {0,                   top},
-        {(lv_coord_t)(clock_dims->hand_min_width/2),  (lv_coord_t)(top + clock_dims->hand_min_top)},
-        {0,                   (lv_coord_t)(top + clock_dims->hand_min_top + clock_dims->hand_min_bottom)},
-        {(lv_coord_t)(-clock_dims->hand_min_width/2), (lv_coord_t)(top + clock_dims->hand_min_top)}
+        {(lv_coord_t)(clock_dims.hand_min_width/2),  (lv_coord_t)(top + clock_dims.hand_min_top)},
+        {0,                   (lv_coord_t)(top + clock_dims.hand_min_top + clock_dims.hand_min_bottom)},
+        {(lv_coord_t)(-clock_dims.hand_min_width/2), (lv_coord_t)(top + clock_dims.hand_min_top)}
     };
     for (int i = 0; i < 4; i++) {
         poly_points[i] = mv(rotate_point(poly_points[i], rad), clock_center);
@@ -359,12 +369,12 @@ void AmigaClockWidget::draw_hour_hand(Canvas *c, double angle_deg) {
     double rad = angle_deg * M_PI / 180.0;
 
     // poly points with offsets to center, so that we can just rotate them
-    lv_coord_t top = -clock_dims->hand_hour_top - clock_dims->hand_hour_bottom;
+    lv_coord_t top = -clock_dims.hand_hour_top - clock_dims.hand_hour_bottom;
     lv_point_t poly_points[] = {
         {0,                   top},
-        {(lv_coord_t)(clock_dims->hand_hour_width/2),  (lv_coord_t)(top + clock_dims->hand_hour_top)},
-        {0,                   (lv_coord_t)(top + clock_dims->hand_hour_top + clock_dims->hand_hour_bottom)},
-        {(lv_coord_t)(-clock_dims->hand_hour_width/2), (lv_coord_t)(top + clock_dims->hand_hour_top)}
+        {(lv_coord_t)(clock_dims.hand_hour_width/2),  (lv_coord_t)(top + clock_dims.hand_hour_top)},
+        {0,                   (lv_coord_t)(top + clock_dims.hand_hour_top + clock_dims.hand_hour_bottom)},
+        {(lv_coord_t)(-clock_dims.hand_hour_width/2), (lv_coord_t)(top + clock_dims.hand_hour_top)}
     };
     for (int i = 0; i < 4; i++) {
         poly_points[i] = mv(rotate_point(poly_points[i], rad), clock_center);
@@ -375,11 +385,11 @@ void AmigaClockWidget::draw_hour_hand(Canvas *c, double angle_deg) {
 void AmigaClockWidget::draw_second_hand(Canvas *c, double angle_deg) {
     double rad = angle_deg * M_PI / 180.0;
 
-    lv_coord_t top = (lv_coord_t)(-clock_dims->hand_min_top - clock_dims->hand_min_bottom);
+    lv_coord_t top = (lv_coord_t)(-clock_dims.hand_min_top - clock_dims.hand_min_bottom);
     lv_point_t line_points[2];
     line_points[0] = mv(rotate_point((lv_point_t){0,top}, rad), clock_center);
     line_points[1] = mv(rotate_point((lv_point_t){0,0}, rad), clock_center);
-    rasterizer->draw_line(c, line_points, 2, AMIGA_ORANGE, clock_dims->second_hand_width);
+    rasterizer->draw_line(c, line_points, 2, AMIGA_ORANGE, clock_dims.second_hand_width);
 }
 
 void AmigaClockWidget::draw_date_line(int day, int month, int year) {
