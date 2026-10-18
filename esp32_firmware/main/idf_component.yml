@@ -20,3 +20,6 @@ dependencies:
 
   # Capacitive touch controller GT911 (I2C)
   espressif/esp_lcd_touch_gt911: "^1.1.0"
+
+  # LVGL v8 API used by the firmware.
+  lvgl/lvgl: "==8.4.0"

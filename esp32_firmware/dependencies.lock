@@ -83,11 +83,19 @@ dependencies:
     source:
       type: idf
     version: 6.1.0
+  lvgl/lvgl:
+    component_hash: d7c1ac037ae6e85d94897f807d6e7ba0946a83e720074fc95a4f6241da9f9f53
+    dependencies: []
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 8.4.0
 direct_dependencies:
 - espressif/esp_lcd_panel_io_additions
 - espressif/esp_lcd_st7701
 - espressif/esp_lcd_touch_gt911
 - idf
-manifest_hash: a268058d23f0a3d630e227899e320dc802495596e3135b2898a3ad6148baafba
+- lvgl/lvgl
+manifest_hash: 6f63e9778c90e94f75ff20a5f9cdfb936e8fc08d10cbaf49748661c0aed33ec0
 target: esp32s3
 version: 3.0.0
