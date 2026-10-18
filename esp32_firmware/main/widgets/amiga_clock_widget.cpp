@@ -153,9 +153,6 @@ const std::string widgets::AmigaClockWidget::PROPERTY_LORES = "lores";
 const std::string widgets::AmigaClockWidget::PROPERTY_ANTIALIAS = "antialias";
 
 AmigaClockWidget::AmigaClockWidget() {
-    antialias = lv_draw_mask_get_antialiasing();
-    update_rasterizer();
-
     static bool initialized = false;
     if (!initialized) {
         init_clock_dimensions(&clock_dims_without_date, LCD_H_RES-CANVAS_BORDER, 2, 2);
@@ -168,6 +165,9 @@ AmigaClockWidget::AmigaClockWidget() {
     show_date = true;
     show_seconds = true;
     lores = false;
+    antialias = false;
+
+    update_rasterizer();
     pick_clock_dimensions();
 
     offscreen = lv_obj_create(NULL);
@@ -269,7 +269,6 @@ void AmigaClockWidget::set_property(const std::string &name, const std::string &
         lores = (value == "true");
     } else if (name == PROPERTY_ANTIALIAS) {
         antialias = (value == "true");
-        lv_draw_mask_set_antialiasing(antialias);
         update_rasterizer();
     }
     pick_clock_dimensions();
