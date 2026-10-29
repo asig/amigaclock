@@ -83,6 +83,9 @@ private:
     void draw_second_hand(Canvas *canvas, double angle_deg);
     void draw_date_line(int day, int month, int year);
 
+    void load_nvs_settings();
+    void save_nvs_settings();
+
     ClockDimensions clock_dims;
     lv_point_t clock_center;
 

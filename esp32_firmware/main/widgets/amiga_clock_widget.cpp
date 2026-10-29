@@ -26,6 +26,7 @@
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "lvgl.h"
+#include "nvs.h"
 
 #include "ble_services.h"
 #include "board_pins.h"
@@ -35,6 +36,13 @@ namespace widgets {
 namespace {
 
 constexpr const char *const TAG = "amiga_clock_widget";
+
+// NVS storage
+constexpr const char *const NVS_NAMESPACE = "amiga_clock";
+constexpr const char *const NVS_SHOW_DATE = "show_date";
+constexpr const char *const NVS_SHOW_SECONDS = "show_seconds";
+constexpr const char *const NVS_RESOLUTION = "resolution";
+constexpr const char *const NVS_ANTIALIAS = "antialias";
 
 constexpr int HIRES_SCALE_DIVIDER = 2;
 constexpr int LORES_SCALE_DIVIDER = 4;
@@ -129,11 +137,61 @@ const std::string widgets::AmigaClockWidget::PROPERTY_SHOW_SECONDS = "show_secon
 const std::string widgets::AmigaClockWidget::PROPERTY_RESOLUTION = "resolution";
 const std::string widgets::AmigaClockWidget::PROPERTY_ANTIALIAS = "antialias";
 
+void AmigaClockWidget::load_nvs_settings() {
+    nvs_handle_t handle = 0;
+    esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READONLY, &handle);
+    if (err != ESP_OK) {
+        ESP_LOGI(TAG, "NVS settings not found, using defaults");
+        return;
+    }
+
+    uint8_t val;
+    if (nvs_get_u8(handle, NVS_SHOW_DATE, &val) == ESP_OK) {
+        show_date = (val != 0);
+    }
+    if (nvs_get_u8(handle, NVS_SHOW_SECONDS, &val) == ESP_OK) {
+        show_seconds = (val != 0);
+    }
+    if (nvs_get_u8(handle, NVS_RESOLUTION, &val) == ESP_OK) {
+        set_resolution(static_cast<Resolution>(val));
+    }
+    if (nvs_get_u8(handle, NVS_ANTIALIAS, &val) == ESP_OK) {
+        antialias = (val != 0);
+    }
+
+    nvs_close(handle);
+    ESP_LOGI(TAG, "Loaded NVS settings: show_date=%d, show_seconds=%d, resolution=%d, antialias=%d",
+             show_date, show_seconds, static_cast<int>(resolution), antialias);
+}
+
+void AmigaClockWidget::save_nvs_settings() {
+    nvs_handle_t handle = 0;
+    esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to open NVS: %s", esp_err_to_name(err));
+        return;
+    }
+
+    nvs_set_u8(handle, NVS_SHOW_DATE, show_date ? 1 : 0);
+    nvs_set_u8(handle, NVS_SHOW_SECONDS, show_seconds ? 1 : 0);
+    nvs_set_u8(handle, NVS_RESOLUTION, static_cast<uint8_t>(resolution));
+    nvs_set_u8(handle, NVS_ANTIALIAS, antialias ? 1 : 0);
+    
+    err = nvs_commit(handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to commit NVS: %s", esp_err_to_name(err));
+    }
+    nvs_close(handle);
+    ESP_LOGI(TAG, "Saved NVS settings");
+}
+
 AmigaClockWidget::AmigaClockWidget() {
     show_date = true;
     show_seconds = true;
     set_resolution(Resolution::SuperHiRes);
     antialias = false;
+
+    load_nvs_settings();
 
     update_rasterizer();
     update_clock_dimensions();
@@ -227,10 +285,14 @@ void AmigaClockWidget::draw_clockface(Canvas *c, const struct tm &t) {
 
 void AmigaClockWidget::set_property(const std::string &name, const std::string &value) {
     ESP_LOGI(TAG, "Setting property %s to %s", name.c_str(), value.c_str());
+    bool changed = false;
+    
     if (name == PROPERTY_SHOW_DATE) {
         show_date = (value == "true");
+        changed = true;
     } else if (name == PROPERTY_SHOW_SECONDS) {
         show_seconds = (value == "true");
+        changed = true;
     } else if (name == PROPERTY_RESOLUTION) {
         if (value == "super-hi-res") {
             set_resolution(Resolution::SuperHiRes);
@@ -239,11 +301,17 @@ void AmigaClockWidget::set_property(const std::string &name, const std::string &
         } else if (value == "lo-res") {
             set_resolution(Resolution::LoRes);
         }
+        changed = true;
     } else if (name == PROPERTY_ANTIALIAS) {
         antialias = (value == "true");
         update_rasterizer();
+        changed = true;
     }
-    update_clock_dimensions();
+    
+    if (changed) {
+        save_nvs_settings();
+        update_clock_dimensions();
+    }
 }
 
 std::string AmigaClockWidget::get_property(const std::string &name) const {
