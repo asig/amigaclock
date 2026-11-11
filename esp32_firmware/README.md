@@ -33,6 +33,10 @@ build downloads the components listed in `main/idf_component.yml`
 (`esp_lcd_st7701`, `esp_lcd_touch_gt911`, and `lvgl`) into
 `managed_components/`.
 
+The project uses `partitions.csv` for its 12 MiB factory app partition.
+Existing configurations must select the custom partition table in
+`idf.py menuconfig` under Partition Table, with `partitions.csv` as its filename.
+
 To flash a connected board and open its serial log:
 
 ```bash
@@ -51,6 +55,7 @@ against the vendor documentation.
 `main/lcd_panel.c` contains the ST7701 initialization sequence and the RGB
 panel setup. The exact ESP-IDF and managed-component versions matter because
 panel configuration fields have changed between ESP-IDF releases.
+LVGL's RGB565 byte swap must be disabled for the 16-bit parallel RGB interface.
 
 ## Startup and time synchronization
 
