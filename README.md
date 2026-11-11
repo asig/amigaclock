@@ -28,7 +28,7 @@ This repository is organized into:
 
 ```bash
 cd esp32_firmware
-. $HOME/esp/esp-idf/export.sh
+. $HOME/.espressif/v6.1/esp-idf/export.sh
 idf.py set-target esp32s3
 idf.py build
 ```
