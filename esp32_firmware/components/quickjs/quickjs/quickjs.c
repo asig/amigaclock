@@ -3311,7 +3311,7 @@ static __maybe_unused void JS_DumpAtoms(JSRuntime *rt)
             printf("  %d: { %d %08x ", i, p->atom_type, p->hash);
             if (!(p->len == 0 && p->is_wide_char != 0))
                 JS_DumpString(rt, p);
-            printf(" %d }\n", p->hash_next);
+            printf(" %" PRIu32 " }\n", p->hash_next);
         }
     }
     printf("}\n");
@@ -3829,17 +3829,17 @@ static const char *JS_AtomGetStrRT(JSRuntime *rt, char *buf, int buf_size,
                                    JSAtom atom)
 {
     if (__JS_AtomIsTaggedInt(atom)) {
-        snprintf(buf, buf_size, "%u", __JS_AtomToUInt32(atom));
+        snprintf(buf, buf_size, "%" PRIu32, __JS_AtomToUInt32(atom));
     } else if (atom == JS_ATOM_NULL) {
         snprintf(buf, buf_size, "<null>");
     } else if (atom >= rt->atom_size) {
         assert(atom < rt->atom_size);
-        snprintf(buf, buf_size, "<invalid %x>", atom);
+        snprintf(buf, buf_size, "<invalid %" PRIx32 ">", atom);
     } else {
         JSAtomStruct *p = rt->atom_array[atom];
         *buf = '\0';
         if (atom_is_free(p)) {
-            snprintf(buf, buf_size, "<free %x>", atom);
+            snprintf(buf, buf_size, "<free %" PRIx32 ">", atom);
         } else if (p != NULL) {
             JSString *str = p;
             if (str->is_wide_char) {
@@ -7187,7 +7187,7 @@ static void js_free_value_rt(JSRuntime *rt, JSValue v)
         }
         break;
     default:
-        printf("js_free_value_rt: unknown tag=%d\n", tag);
+        printf("js_free_value_rt: unknown tag=%" PRId32 "\n", (int32_t)tag);
         abort();
     }
 }
@@ -12696,7 +12696,7 @@ static __maybe_unused void js_bigint_dump1(JSContext *ctx, const char *str,
     int i;
     printf("%s: ", str);
     for(i = len - 1; i >= 0; i--) {
-        printf(" %08x", tab[i]);
+        printf(" %08" PRIx32, tab[i]);
     }
     printf("\n");
 }
@@ -14735,7 +14735,7 @@ static JSValue JS_ToQuotedString(JSContext *ctx, JSValueConst val1)
             break;
         default:
             if (c < 32 || is_surrogate(c)) {
-                snprintf(buf, sizeof(buf), "\\u%04x", c);
+                snprintf(buf, sizeof(buf), "\\u%04" PRIx32, c);
                 if (string_buffer_write8(b, (uint8_t*)buf, 6))
                     goto fail;
             } else {
@@ -14941,12 +14941,12 @@ static __maybe_unused void JS_DumpValue(JSRuntime *rt, JSValueConst val)
             /* In order to avoid allocations we just dump the limbs */
             sgn = js_bigint_sign(p);
             if (sgn)
-                printf("BigInt.asIntN(%d,", p->len * JS_LIMB_BITS);
+                printf("BigInt.asIntN(%zu,", (size_t)p->len * JS_LIMB_BITS);
             printf("0x");
             for(i = p->len - 1; i >= 0; i--) {
                 if (i != p->len - 1)
                     printf("_");
-                printf("%08x", p->tab[i]);
+                printf("%08" PRIx32, p->tab[i]);
             }
             printf("n");
             if (sgn)
@@ -14963,7 +14963,7 @@ static __maybe_unused void JS_DumpValue(JSRuntime *rt, JSValueConst val)
     case JS_TAG_STRING_ROPE:
         {
             JSStringRope *r = JS_VALUE_GET_STRING_ROPE(val);
-            printf("[rope len=%d depth=%d]", r->len, r->depth);
+            printf("[rope len=%" PRIu32 " depth=%d]", r->len, r->depth);
         }
         break;
     case JS_TAG_FUNCTION_BYTECODE:
@@ -14998,7 +14998,7 @@ static __maybe_unused void JS_DumpValue(JSRuntime *rt, JSValueConst val)
         printf("[module]");
         break;
     default:
-        printf("[unknown tag %d]", tag);
+        printf("[unknown tag %" PRId32 "]", (int32_t)tag);
         break;
     }
 }
@@ -33287,29 +33287,29 @@ static void dump_byte_code(JSContext *ctx, int pass,
             printf(" %d", op - OP_call0);
             break;
         case OP_FMT_u8:
-            printf(" %u", get_u8(tab + pos));
+            printf(" %" PRIu32, get_u8(tab + pos));
             break;
         case OP_FMT_i8:
-            printf(" %d", get_i8(tab + pos));
+            printf(" %" PRId32, get_i8(tab + pos));
             break;
         case OP_FMT_u16:
         case OP_FMT_npop:
-            printf(" %u", get_u16(tab + pos));
+            printf(" %" PRIu32, get_u16(tab + pos));
             break;
         case OP_FMT_npop_u16:
-            printf(" %u,%u", get_u16(tab + pos), get_u16(tab + pos + 2));
+            printf(" %" PRIu32 ",%" PRIu32, get_u16(tab + pos), get_u16(tab + pos + 2));
             break;
         case OP_FMT_i16:
-            printf(" %d", get_i16(tab + pos));
+            printf(" %" PRId32, get_i16(tab + pos));
             break;
         case OP_FMT_i32:
-            printf(" %d", get_i32(tab + pos));
+            printf(" %" PRId32, get_i32(tab + pos));
             break;
         case OP_FMT_u32:
-            printf(" %u", get_u32(tab + pos));
+            printf(" %" PRIu32, get_u32(tab + pos));
             break;
         case OP_FMT_u32x2:
-            printf(" %u:%u", get_u32(tab + pos), get_u32(tab + pos + 4));
+            printf(" %" PRIu32 ":%" PRIu32, get_u32(tab + pos), get_u32(tab + pos + 4));
             break;
         case OP_FMT_label8:
             addr = get_i8(tab + pos);
@@ -33332,7 +33332,7 @@ static void dump_byte_code(JSContext *ctx, int pass,
                     printf(" %d", addr + pos);
             }
             if (oi->fmt == OP_FMT_label_u16)
-                printf(",%u", get_u16(tab + pos + 4));
+                printf(",%" PRIu32, get_u16(tab + pos + 4));
             break;
         case OP_FMT_const8:
             idx = get_u8(tab + pos);
@@ -33353,12 +33353,12 @@ static void dump_byte_code(JSContext *ctx, int pass,
         case OP_FMT_atom_u8:
             printf(" ");
             print_atom(ctx, get_u32(tab + pos));
-            printf(",%d", get_u8(tab + pos + 4));
+            printf(",%" PRIu32, get_u8(tab + pos + 4));
             break;
         case OP_FMT_atom_u16:
             printf(" ");
             print_atom(ctx, get_u32(tab + pos));
-            printf(",%d", get_u16(tab + pos + 4));
+            printf(",%" PRIu32, get_u16(tab + pos + 4));
             break;
         case OP_FMT_atom_label_u8:
         case OP_FMT_atom_label_u16:
@@ -33372,9 +33372,9 @@ static void dump_byte_code(JSContext *ctx, int pass,
             if (pass == 3)
                 printf(",%u", addr + pos + 4);
             if (oi->fmt == OP_FMT_atom_label_u8)
-                printf(",%u", get_u8(tab + pos + 8));
+                printf(",%" PRIu32, get_u8(tab + pos + 8));
             else
-                printf(",%u", get_u16(tab + pos + 8));
+                printf(",%" PRIu32, get_u16(tab + pos + 8));
             break;
         case OP_FMT_none_loc:
             if (op == OP_get_loc0_loc1) {
@@ -36712,7 +36712,7 @@ static __exception int ss_check(JSContext *ctx, StackSizeState *s,
                                   s->stack_level_tab[pos], stack_len, pos);
             return -1;
         } else if (s->catch_pos_tab[pos] != catch_pos) {
-            JS_ThrowInternalError(ctx, "inconsistent catch position: %d %d (pc=%d)",
+            JS_ThrowInternalError(ctx, "inconsistent catch position: %" PRId32 " %d (pc=%d)",
                                   s->catch_pos_tab[pos], catch_pos, pos);
             return -1;
         } else {
@@ -39231,7 +39231,7 @@ static int JS_WriteObjectRec(BCWriterState *s, JSValueConst obj)
         break;
     default:
     invalid_tag:
-        JS_ThrowInternalError(s->ctx, "unsupported tag (%d)", tag);
+        JS_ThrowInternalError(s->ctx, "unsupported tag (%" PRId32 ")", (int32_t)tag);
         goto fail;
     }
     return 0;
@@ -40401,7 +40401,7 @@ static JSValue JS_ReadObjectRec(BCReaderState *s)
             int32_t val;
             if (bc_get_sleb128(s, &val))
                 return JS_EXCEPTION;
-            bc_read_trace(s, "%d\n", val);
+            bc_read_trace(s, "%" PRId32 "\n", val);
             obj = js_int32(val);
         }
         break;
@@ -40472,9 +40472,9 @@ static JSValue JS_ReadObjectRec(BCReaderState *s)
                 return JS_ThrowSyntaxError(ctx, "object references are not allowed");
             if (bc_get_leb128(s, &val))
                 return JS_EXCEPTION;
-            bc_read_trace(s, "%u\n", val);
+            bc_read_trace(s, "%" PRIu32 "\n", val);
             if (val >= s->objects_count || !s->objects[val]) {
-                return JS_ThrowSyntaxError(ctx, "invalid object reference (%u >= %u)",
+                return JS_ThrowSyntaxError(ctx, "invalid object reference (%" PRIu32 " >= %d)",
                                            val, s->objects_count);
             }
             obj = js_dup(JS_MKPTR(JS_TAG_OBJECT, s->objects[val]));
@@ -40534,12 +40534,12 @@ static int JS_ReadObjectAtoms(BCReaderState *s)
     if (bc_get_leb128(s, &s->idx_to_atom_count))
         return -1;
     if (s->idx_to_atom_count > 1000*1000) {
-        JS_ThrowInternalError(s->ctx, "unreasonable atom count: %u",
+        JS_ThrowInternalError(s->ctx, "unreasonable atom count: %" PRIu32,
                               s->idx_to_atom_count);
         return -1;
     }
 
-    bc_read_trace(s, "%u atom indexes {\n", s->idx_to_atom_count);
+    bc_read_trace(s, "%" PRIu32 " atom indexes {\n", s->idx_to_atom_count);
 
     if (s->idx_to_atom_count != 0) {
         s->idx_to_atom = js_mallocz(s->ctx, s->idx_to_atom_count *
@@ -49697,10 +49697,10 @@ static JSValue js_regexp_escape(JSContext *ctx, JSValueConst this_val,
             string_buffer_putc8(b, c);
         } else if (c < 256) {
         hex2:
-            snprintf(s, sizeof(s), "\\x%02x", c);
+            snprintf(s, sizeof(s), "\\x%02" PRIx32, c);
             string_buffer_puts8(b, s);
         } else if (is_surrogate(c) || lre_is_white_space(c) || c == 0xFEFF) {
-            snprintf(s, sizeof(s), "\\u%04x", c);
+            snprintf(s, sizeof(s), "\\u%04" PRIx32, c);
             string_buffer_puts8(b, s);
         } else {
             string_buffer_putc16(b, c);

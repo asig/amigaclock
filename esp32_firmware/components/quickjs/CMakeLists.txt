@@ -17,5 +17,4 @@ target_compile_options(${COMPONENT_LIB} PRIVATE
     -Wno-sign-compare
     -Wno-missing-field-initializers
     -Wno-unused-function
-    -Wno-format
 )
